@@ -98,7 +98,7 @@ b_ms1 = st.sidebar.number_input("Piyasa Oranı: MS1", min_value=1.01, value=1.75
 b_x = st.sidebar.number_input("Piyasa Oranı: X", min_value=1.01, value=3.50, step=0.05)
 b_ms2 = st.sidebar.number_input("Piyasa Oranı: MS2", min_value=1.01, value=3.20, step=0.05)
 
-# --- MATEMATİK MOTORU ---
+# --- ⚙️ DÜZELTİLMİŞ MATEMATİK MOTORU ---
 ev_ppg = ev_ic_puan / ev_ic_mac
 dep_ppg = dep_dis_puan / dep_dis_mac
 ev_gol_ort = ev_toplam_gol / ev_ic_mac
@@ -106,18 +106,27 @@ dep_gol_ort = dep_toplam_gol / dep_dis_mac
 ev_yenen_ort = ev_toplam_yenen / ev_ic_mac
 dep_yenen_ort = dep_toplam_yenen / dep_dis_mac
 
+# Güç katsayıları
 ev_toplam = (ev_son5 * 2) + (ev_ppg * 5) + (ev_gol_ort * 10) + ((3 - ev_yenen_ort) * 10) + (-ev_eksik * 5) + (ev_mot * 5)
 dep_toplam = (dep_son5 * 2) + (dep_ppg * 5) + (dep_gol_ort * 10) + ((3 - dep_yenen_ort) * 10) + (-dep_eksik * 5) + (dep_mot * 5)
 
 ev_toplam, dep_toplam = max(ev_toplam, 1), max(dep_toplam, 1)
 
-ms1_olasilik = (ev_toplam / (ev_toplam + dep_toplam)) * 100
-ms2_olasilik = (dep_toplam / (ev_toplam + dep_toplam)) * 100
-x_olasilik = 100 - (ms1_olasilik + ms2_olasilik)
+# [YENİ] Beraberlik İhtimali Hesaplama Mantığı
+# İki takımın güç farkı yüzdesi ne kadar azsa, beraberlik o kadar kuvvetlidir (Max %35, Min %10)
+guc_farki_orani = abs(ev_toplam - dep_toplam) / (ev_toplam + dep_toplam)
+x_olasilik = max(35 - (guc_farki_orani * 50), 10)
 
+# Kalan yüzdeyi MS1 ve MS2 arasında adilce dağıtma
+kalan_yuzde = 100 - x_olasilik
+ms1_olasilik = (ev_toplam / (ev_toplam + dep_toplam)) * kalan_yuzde
+ms2_olasilik = (dep_toplam / (ev_toplam + dep_toplam)) * kalan_yuzde
+
+# Gol olasılıkları
 ust_olasilik = min(max(((ev_gol_ort + dep_gol_ort) / 4) * 100, 0), 100)
 kg_var_olasilik = min(max(((ev_gol_ort + dep_gol_ort) / (ev_yenen_ort + dep_yenen_ort + 1)) * 50, 0), 100)
 
+# Value (Değer) Hesaplama
 v_ms1 = ms1_olasilik - (100 / b_ms1)
 v_x = x_olasilik - (100 / b_x)
 v_ms2 = ms2_olasilik - (100 / b_ms2)
