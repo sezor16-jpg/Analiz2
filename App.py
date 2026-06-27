@@ -6,7 +6,7 @@ import math
 from datetime import datetime
 
 # --- PREMIUM SAYFA AYARLARI ---
-st.set_page_config(page_title="AlphaAnalytix AI Quantum PRO", page_icon="🔮", layout="wide")
+st.set_page_config(page_title="Sezgin Görmüş Analiz", page_icon="🔮", layout="wide")
 
 DB_FILE = "analiz_gunlugu.csv"
 if not os.path.exists(DB_FILE):
@@ -47,7 +47,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-sekme1, sekme2 = st.tabs(["🔮 Quantum Pro Laboratuvarı", "🗂️ Gelişmiş Analiz Arşivi"])
+sekme1, sekme2 = st.tabs(["🔮 Grms Analiz Laboratuvarı", "🗂️ Gelişmiş Analiz Arşivi"])
 
 # --- SIDEBAR VERİ GİRİŞİ ---
 st.sidebar.markdown("### 🏟️ Müsabaka Künyesi")
@@ -219,10 +219,19 @@ with sekme1:
             st.success("Analiz tüm alt/üst pazarlarıyla birlikte arşive mühürlendi kanka!")
         st.markdown('</div>', unsafe_allow_html=True)
 
-# --- SEKME 2: YENİ GELİŞMİŞ ARŞİV PANELİ ---
+# --- SEKME 2: TAM KORUMALI GELİŞMİŞ ARŞİV PANELİ ---
 with sekme2:
     st.title("🗂️ Gelişmiş Analiz Günlüğü & Sonuçlandırma Odası")
     df_logs = pd.read_csv(DB_FILE)
+    
+    # 🛡️ ESKİ CSV DOSYALARINI OTOMATİK KURTARMA DUVARI (Görsellerdeki KeyError Kilitlerini Çözen Yer)
+    if "Pazar_Tipi" not in df_logs.columns:
+        df_logs["Pazar_Tipi"] = "Maç Sonucu"
+    if "Model_Ust" not in df_logs.columns:
+        df_logs["Model_Ust"] = 0.0
+    if "Model_KGVar" not in df_logs.columns:
+        df_logs["Model_KGVar"] = 0.0
+    df_logs.to_csv(DB_FILE, index=False)
     
     if len(df_logs) == 0:
         st.info("Arşiv henüz boş kanka.")
@@ -245,7 +254,6 @@ with sekme2:
             sonuc = st.selectbox("Maç Nasıl Sonuçlandı?", secenekler)
             
         if st.button("Sonucu Arşive İşle"):
-            # Basit kazanma kontrolü entegrasyonu
             onerilen = df_logs.loc[secilen, "Onerilen_Bahis"]
             if "MS1" in onerilen and sonuc == "MS1 Bitti ✅": final_durum = "KAZANDI ✅"
             elif "MS2" in onerilen and sonuc == "MS2 Bitti ✅": final_durum = "KAZANDI ✅"
@@ -256,7 +264,7 @@ with sekme2:
             elif "KG Yok" in onerilen and sonuc == "KG Yok Bitti ✅": final_durum = "KAZANDI ✅"
             elif sonuc == "Bekliyor": final_durum = "Bekliyor"
             elif sonuc == "KAYBETTİ ❌": final_durum = "KAYBETTİ ❌"
-            else: final_durum = sonuc # Manuel seçtiyse doğrudan yazar
+            else: final_durum = sonuc
             
             df_logs.loc[secilen, "Sonuc"] = final_durum
             df_logs.to_csv(DB_FILE, index=False)
