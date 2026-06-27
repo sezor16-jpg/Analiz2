@@ -36,7 +36,7 @@ def mac_simule_et(ev_gol_beklentisi, dep_gol_beklentisi):
             else: ms2 += p_skor
             
     toplam = ms1 + beraberlik + ms2
-    return (ms1/toplam)*100, (beraberlik/toplam)*100, (ms2/topham)*100
+    return (ms1/toplam)*100, (beraberlik/toplam)*100, (ms2/toplam)*100
 
 # --- CSS VE GÖRSEL MOTOR ---
 st.markdown("""
