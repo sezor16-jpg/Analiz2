@@ -98,7 +98,7 @@ b_ms1 = st.sidebar.number_input("Piyasa Oranı: MS1", min_value=1.01, value=1.75
 b_x = st.sidebar.number_input("Piyasa Oranı: X", min_value=1.01, value=3.50, step=0.05)
 b_ms2 = st.sidebar.number_input("Piyasa Oranı: MS2", min_value=1.01, value=3.20, step=0.05)
 
-# --- ⚙️ DÜZELTİLMİŞ MATEMATİK MOTORU ---
+# --- ⚙️ NİHAİ DENGELENMİŞ MATEMATİK MOTORU ---
 ev_ppg = ev_ic_puan / ev_ic_mac
 dep_ppg = dep_dis_puan / dep_dis_mac
 ev_gol_ort = ev_toplam_gol / ev_ic_mac
@@ -106,18 +106,20 @@ dep_gol_ort = dep_toplam_gol / dep_dis_mac
 ev_yenen_ort = ev_toplam_yenen / ev_ic_mac
 dep_yenen_ort = dep_toplam_yenen / dep_dis_mac
 
-# Güç katsayıları
-ev_toplam = (ev_son5 * 2) + (ev_ppg * 5) + (ev_gol_ort * 10) + ((3 - ev_yenen_ort) * 10) + (-ev_eksik * 5) + (ev_mot * 5)
-dep_toplam = (dep_son5 * 2) + (dep_ppg * 5) + (dep_gol_ort * 10) + ((3 - dep_yenen_ort) * 10) + (-dep_eksik * 5) + (dep_mot * 5)
+# Dengelenmiş Saf Güç Skorları (Çarpanlar normalize edildi)
+# Gol ortalamalarının baskısı düşürüldü, form ve ppg dengelendi
+ev_saf_guc = (ev_son5 * 3) + (ev_ppg * 10) + (ev_gol_ort * 5) + ((3 - ev_yenen_ort) * 5) + (-ev_eksik * 3) + (ev_mot * 3)
+dep_saf_guc = (dep_son5 * 3) + (dep_ppg * 10) + (dep_gol_ort * 5) + ((3 - dep_yenen_ort) * 5) + (-dep_eksik * 3) + (dep_mot * 3)
 
-ev_toplam, dep_toplam = max(ev_toplam, 1), max(dep_toplam, 1)
+# Ev sahibine sadece makul bir iç saha avantajı ekliyoruz (+%10 bonus gibi)
+ev_toplam = max(ev_saf_guc * 1.10, 1)
+dep_toplam = max(dep_saf_guc, 1)
 
-# [YENİ] Beraberlik İhtimali Hesaplama Mantığı
-# İki takımın güç farkı yüzdesi ne kadar azsa, beraberlik o kadar kuvvetlidir (Max %35, Min %10)
+# Beraberlik Hesaplama Mantığı (Güçler yakınsa beraberlik artar)
 guc_farki_orani = abs(ev_toplam - dep_toplam) / (ev_toplam + dep_toplam)
-x_olasilik = max(35 - (guc_farki_orani * 50), 10)
+x_olasilik = max(35 - (guc_farki_orani * 60), 12)
 
-# Kalan yüzdeyi MS1 ve MS2 arasında adilce dağıtma
+# Kalan yüzdeyi adilce dağıtma
 kalan_yuzde = 100 - x_olasilik
 ms1_olasilik = (ev_toplam / (ev_toplam + dep_toplam)) * kalan_yuzde
 ms2_olasilik = (dep_toplam / (ev_toplam + dep_toplam)) * kalan_yuzde
@@ -130,6 +132,7 @@ kg_var_olasilik = min(max(((ev_gol_ort + dep_gol_ort) / (ev_yenen_ort + dep_yene
 v_ms1 = ms1_olasilik - (100 / b_ms1)
 v_x = x_olasilik - (100 / b_x)
 v_ms2 = ms2_olasilik - (100 / b_ms2)
+
 
 # Dinamik Yorum ve En İyi Öneri Seçimi
 onerilen_bahis_adi = "Çifte Şans 1-X"
