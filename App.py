@@ -23,25 +23,46 @@ def poisson_olasilik(k, lmbda):
     if lmbda <= 0: return 1.0 if k == 0 else 0.0
     return (math.exp(-lmbda) * (lmbda**k)) / math.factorial(k)
     
-def mac_simule_et(ev_gol_beklentisi, dep_gol_beklentisi):
-    # 100.000 maçlık devasa simülasyon havuzu
-    simulasyon_sayisi = 100000
-    
-    # Bilgisayar, verdiğin xG değerlerine göre arkada rastgele 100.000 maçlık gol sayıları üretiyor
-    ev_goller = np.random.poisson(ev_gol_beklentisi, simulasyon_sayisi)
-    dep_goller = np.random.poisson(dep_gol_beklentisi, simulasyon_sayisi)
-    
-    # 100.000 maçın sonuçları çeteleye işleniyor
-    ms1_sayisi = np.sum(ev_goller > dep_goller)
-    beraberlik_sayisi = np.sum(ev_goller == dep_goller)
-    ms2_sayisi = np.sum(ev_goller < dep_goller)
-    
-    # Yüzdesel oranlar hesaplanıp ana panele gönderiliyor
-    ms1_yuzde = (ms1_sayisi / simulasyon_sayisi) * 100
-    x_yuzde = (beraberlik_sayisi / simulasyon_sayisi) * 100
-    ms2_yuzde = (ms2_sayisi / simulasyon_sayisi) * 100
-    
-    return ms1_yuzde, x_yuzde, ms2_yuzde
+def dixon_coles_duzeltme(i, j):
+    if i == 0 and j == 0:
+        return 1.12
+    elif i == 1 and j == 0:
+        return 1.08
+    elif i == 0 and j == 1:
+        return 1.08
+    elif i == 1 and j == 1:
+        return 1.10
+    return 1.0
+
+
+def mac_sonuc_olasiliklari(ev_xg, dep_xg):
+    ms1 = 0
+    beraberlik = 0
+    ms2 = 0
+
+    for i in range(11):
+        for j in range(11):
+
+            p = (
+                poisson_olasilik(i, ev_xg)
+                * poisson_olasilik(j, dep_xg)
+                * dixon_coles_duzeltme(i, j)
+            )
+
+            if i > j:
+                ms1 += p
+            elif i == j:
+                beraberlik += p
+            else:
+                ms2 += p
+
+    toplam = ms1 + beraberlik + ms2
+
+    ms1 = (ms1 / toplam) * 100
+    beraberlik = (beraberlik / toplam) * 100
+    ms2 = (ms2 / toplam) * 100
+
+    return ms1, beraberlik, ms2
 
 # --- PREMIUM GÖRSEL ARYÜZ TASARIMI (CSS) ---
 st.markdown("""
@@ -147,15 +168,6 @@ dep_dinamik_hucum = (dep_genel_hucum * sezon_agirligi) + (dep_son5_hucum * form_
 dep_dinamik_savunma = (dep_genel_savunma * sezon_agirligi) + (dep_son5_savunma * form_agirligi)
 
 
-
-# 3. Clean Sheet Çift Sayım Filtresi (Yumuşatılmış Etki)
-
-ev_dinamik_savunma *= (1.0 - (ev_cs * 0.03))
-
-dep_dinamik_savunma *= (1.0 - (dep_cs * 0.03))
-
-
-
 # 4. Profesyonel Lig Başı Oranlama ve Ters Metrik Optimizasyonu
 
 yarim_lig_ort = lig_ort_gol / 2
@@ -195,48 +207,59 @@ dep_onem_carpan = 1.0 - (onem_farki * 0.03)
 
 
 # 7. Kadro Eksik Metrisi (Kritik ve Normal Eksikler Ayrı Ağırlıklandırıldı)
+ev_kadro_cezasi = min(
+    (ev_kritik_eksik * 0.12) +
+    (ev_normal_eksik * 0.04),
+    0.45
+)
 
-ev_kadro_cezasi = (ev_kritik_eksik * 0.22) + (ev_normal_eksik * 0.08)
-
-dep_kadro_cezasi = (dep_kritik_eksik * 0.22) + (dep_normal_eksik * 0.08)
-
-
-
+dep_kadro_cezasi = min(
+    (dep_kritik_eksik * 0.12) +
+    (dep_normal_eksik * 0.04),
+    0.45
+)
 # 8. Nihai Profesyonel xG Tahmin Çıktıları
+ev_xg = (
+    yarim_lig_ort *
+    ev_hucum_katsayi *
+    dep_savunma_katsayi *
+    puan_denge_carpan *
+    ev_onem_carpan
+)
 
-ev_xg = (yarim_lig_ort * ev_hucum_katsayi * dep_savunma_katsayi) * puan_denge_carpan * ev_onem_carpan - ev_kadro_cezasi
+dep_xg = (
+    yarim_lig_ort *
+    dep_hucum_katsayi *
+    ev_savunma_katsayi *
+    (2.0 - puan_denge_carpan) *
+    dep_onem_carpan
+)
 
-dep_xg = (yarim_lig_ort * dep_hucum_katsayi * ev_savunma_katsayi) * (2.0 - puan_denge_carpan) * dep_onem_carpan - dep_kadro_cezasi
+ev_xg *= (1 - ev_kadro_cezasi)
+dep_xg *= (1 - dep_kadro_cezasi)
 
-
+ev_xg += HOME_ADVANTAGE
 
 ev_xg = max(ev_xg, 0.05)
-
 dep_xg = max(dep_xg, 0.05)
 
-
-
 # Simülasyon Hesaplamaları (Genişletilmiş Havuz)
-
-ms1_olasilik, x_olasilik, ms2_olasilik = mac_simule_et(ev_xg, dep_xg)
-
-
+ms1_olasilik, x_olasilik, ms2_olasilik = mac_sonuc_olasiliklari(
+    ev_xg,
+    dep_xg
+)
 
 # En Olası Matris Skor Projeksiyonu
 
 en_yuksek_skor_p, tahmin_ev_skor, tahmin_dep_skor = 0, 0, 0
 
-for i in range(6):
-
-    for j in range(6):
-
-        p = poisson_olasilik(i, ev_xg) * poisson_olasilik(j, dep_xg)
-
-        if p > en_yuksek_skor_p:
-
-            en_yuksek_skor_p, tahmin_ev_skor, tahmin_dep_skor = p, i, j
-
-
+for i in range(11):
+    for j in range(11):
+        p = (
+    poisson_olasilik(i, ev_xg)
+    * poisson_olasilik(j, dep_xg)
+    * dixon_coles_duzeltme(i, j)
+)
 
 # Gelişmiş Alt/Üst ve KG Var Dağılım Hesaplama
 
@@ -246,11 +269,11 @@ for i in range(11):
 
     for j in range(11):
 
-        p = poisson_olasilik(i, ev_xg) * poisson_olasilik(j, dep_xg)
-
-        if (i + j) > 2.5: ust_olasilik += p
-
-        if i > 0 and j > 0: kg_var_olasilik += p
+        p = (
+    poisson_olasilik(i, ev_xg)
+    * poisson_olasilik(j, dep_xg)
+    * dixon_coles_duzeltme(i, j)
+)
 
 ust_olasilik *= 100
 
@@ -260,14 +283,9 @@ kg_var_olasilik *= 100
 
 # Hassas Değer (Value) Filtrelemesi
 
-v_ms1 = ms1_olasilik - (100 / b_ms1)
-
-v_x = x_olasilik - (100 / b_x)
-
-v_ms2 = ms2_olasilik - (100 / b_ms2)
-
-
-
+v_ms1 = (b_ms1 * (ms1_olasilik / 100)) - 1
+v_x = (b_x * (x_olasilik / 100)) - 1
+v_ms2 = (b_ms2 * (ms2_olasilik / 100)) - 1
 
 
 # --- 🎙️ VERİ TABANLI DETAYLI TEKNİK ANALİZ ÖZETİ ---
