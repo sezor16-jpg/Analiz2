@@ -5,7 +5,6 @@ import os
 import math
 from datetime import datetime
 import tkinter as tk
-from tkinter import ttk
 import numpy as np
 
 # --- SEZGİN GÖRMÜŞ AI PRO v7.0 SAYFA AYARLARI ---
@@ -127,24 +126,22 @@ def lig_degisti(event):
         ev_sahibi_kutusu.set("Takım Seçiniz...")
         deplasman_kutusu.set("Takım Seçiniz...")
 
-# --- HİBRİT LİG VE TAKIM SEÇİM ALANI ---
+# --- HİBRİT LİG VE TAKIM SEÇİM ALANI (SAF STREAMLIT) ---
 st.sidebar.markdown("### 🏟️ Müsabaka Seçim Odası")
 
-# 1. Lig Seçimi (En sona "Diğer" ekledik kanka)
+# 1. Lig Seçimi
 lig_listesi = list(LIG_VERITABANI.keys()) + ["🌍 Diğer / Listede Olmayan Lig"]
 secilen_lig = st.sidebar.selectbox("Ligi Seç kanka:", lig_listesi)
 
 # 2. Ev Sahibi Alanı
 if secilen_lig == "🌍 Diğer / Listede Olmayan Lig":
-    # Lig listede yoksa mecbur el yazısıyla yazdırıyoruz
     ev_sahibi = st.sidebar.text_input("Ev Sahibi Takım Adı:", "Ev Sahibi")
 else:
-    # Lig varsa, takımların en başına "Kendim Yazacağım" seçeneği koyuyoruz
     ev_secenekleri = ["✍️ Kendim Yazacağım..."] + LIG_VERITABANI[secilen_lig]
-    ev_secim = st.sidebar.selectbox("Ev Sahibi Takım:", ev_secenekleri, index=1) # Varsayılan ilk takım gelsin
+    ev_secim = st.sidebar.selectbox("Ev Sahibi Takım:", ev_secenekleri, index=1)
     
     if ev_secim == "✍️ Kendim Yazacağım...":
-        ev_sahibi = st.sidebar.text_input("Ev Sahibi Takım Adını Gir kanka:")
+        ev_sahibi = st.sidebar.text_input("Ev Sahibi Takım Adını Gir kanka:", "Ev Sahibi")
     else:
         ev_sahibi = ev_secim
 
@@ -153,10 +150,10 @@ if secilen_lig == "🌍 Diğer / Listede Olmayan Lig":
     deplasman = st.sidebar.text_input("Deplasman Takım Adı:", "Deplasman")
 else:
     dep_secenekleri = ["✍️ Kendim Yazacağım..."] + LIG_VERITABANI[secilen_lig]
-    dep_secim = st.sidebar.selectbox("Deplasman Takımı:", dep_secenekleri, index=2) # Varsayılan ikinci takım gelsin
+    dep_secim = st.sidebar.selectbox("Deplasman Takımı:", dep_secenekleri, index=2)
     
     if dep_secim == "✍️ Kendim Yazacağım...":
-        deplasman = st.sidebar.text_input("Deplasman Takım Adını Gir kanka:")
+        deplasman = st.sidebar.text_input("Deplasman Takım Adını Gir kanka:", "Deplasman")
     else:
         deplasman = dep_secim
 
