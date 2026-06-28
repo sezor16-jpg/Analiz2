@@ -99,7 +99,7 @@ b_ms2 = st.sidebar.number_input("Bülten Oranı: MS 2", min_value=1.01, value=2.
 b_ust = st.sidebar.number_input("Bülten Oranı: 2.5 Üst", min_value=1.01, value=1.75)
 
 
-# --- ⚙️ SEZGİN GÖRMÜŞ MATEMATİKSEL PROJEKSİYON MOTORU ---
+# --- ⚙️ SEZGİN GÖRMÜŞ MATHEMATICAL MATRIX MOTORU ---
 ev_genel_hucum = ev_toplam_gol / ev_ic_mac
 ev_genel_savunma = ev_toplam_yenen / ev_ic_mac
 dep_genel_hucum = dep_toplam_gol / dep_dis_mac
@@ -110,7 +110,6 @@ ev_son5_savunma = ev_son5_yedigi / 5
 dep_son5_hucum = dep_son5_attigi / 5
 dep_son5_savunma = dep_son5_yedigi / 5
 
-# Formüller matematiksel olarak kusursuzlaştırıldı
 ev_dinamik_hucum = (ev_genel_hucum * sezon_agirligi) + (ev_son5_hucum * form_agirligi)
 ev_dinamik_savunma = (ev_genel_savunma * sezon_agirligi) + (ev_son5_savunma * form_agirligi)
 dep_dinamik_hucum = (dep_genel_hucum * sezon_agirligi) + (dep_son5_hucum * form_agirligi)
@@ -197,7 +196,7 @@ if v_ms1 > 0 and ms1_olasilik >= 45: en_iyi_bahis, pazar_t, secilen_oran = f"MS 
 elif v_ms2 > 0 and ms2_olasilik >= 45: en_iyi_bahis, pazar_t, secilen_oran = f"MS 2 ({deplasman})", "Maç Sonucu", b_ms2
 elif v_ust > 0 and ust_olasilik >= 58: en_iyi_bahis, pazar_t, secilen_oran = "2.5 Üst", "2.5 Alt/Üst", b_ust
 elif v_x > 0 and x_olasilik >= 32: en_iyi_bahis, pazar_t, secilen_oran = "Beraberlik (X)", "Maç Sonucu", b_x
-elif kg_var_olasilik >= 60: en_iyi_bahis, pazar_t, secilen_oran = "KG Var", "Karşılıklı Gol", 1.65
+elif kg_var_olasilik >= 60: en_iyi_bahis, pazar_t, secilen_oran = "KG Var", "Karşılıklı Gol", 1.60
 
 # --- ANA PANEL ARABİRİMİ ---
 with sekme1:
@@ -242,6 +241,7 @@ with sekme1:
         st.markdown(f'<div style="color:#f59e0b; font-weight:bold; font-size:18px;">🎯 ÖNERİLEN BAHİS: {en_iyi_bahis}</div>', unsafe_allow_html=True)
         st.markdown(f'<div style="margin-top:5px; font-size:16px;">🛡️ SİSTEM GÜVEN SKORU: <span style="color:{guven_renk}; font-weight:bold;">{guven_metni}</span></div>', unsafe_allow_html=True)
         
+        # --- TEKNİK ANALİZ VERİ DETAYI GÖRSEL ALANI ---
         st.write("")
         st.markdown("##### 🎙️ Veri Mühendisliği Taktik Analizi")
         st.markdown(f'<div class="yorum-box">{nihai_yorum}</div>', unsafe_allow_html=True)
@@ -293,7 +293,7 @@ with sekme2:
         with cf4: st.metric("📊 Finansal ROI (Yatırım Getirisi)", f"%{roi:+.1f}")
         
         st.write("---")
-        st.markdown("### 🛠️ Maç Sonucu Düzenleme İstasyonu")
+        st.markdown("### 🛠️ Maç Sonuçlandırma İstasyonu")
         c_m, c_s = st.columns(2)
         with c_m:
             secilen = st.selectbox("Sonuçlandırılacak Maçı Seç", df_logs.index, format_func=lambda x: f"{df_logs.loc[x, 'Ev Sahibi']} - {df_logs.loc[x, 'Deplasman']} -> [{df_logs.loc[x, 'Onerilen_Bahis']}]")
@@ -304,11 +304,7 @@ with sekme2:
             df_logs.loc[secilen, "Sonuc"] = sonuc
             df_logs.to_csv(DB_FILE, index=False)
             st.success("Veritabanı güncellendi!")
-            # Streamlit Versiyon Bağımsız Güvenli Yeniden Başlatma Kontrolü
-            if hasattr(st, "rerun"):
-                st.rerun()
-            else:
-                st.experimental_rerun()
+            st.rerun()
             
         st.write("---")
         st.dataframe(df_logs, use_container_width=True)
