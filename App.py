@@ -4,6 +4,8 @@ import plotly.graph_objects as go
 import os
 import math
 from datetime import datetime
+import tkinter as tk
+from tkinter import ttk
 import numpy as np
 
 # --- SEZGİN GÖRMÜŞ AI PRO v7.0 SAYFA AYARLARI ---
@@ -48,6 +50,160 @@ def mac_simule_et(ev_gol_beklentisi, dep_gol_beklentisi):
     
     return ms1_yuzde, x_yuzde, ms2_yuzde
 
+# 1. BÜYÜK LİG VE TAKIM VERİTABANI (İstediğin kadar ülke ve 2. lig ekleyebilirsin)
+LIG_VERITABANI = {
+    "Türkiye Trendyol Süper Lig": [
+        "Galatasaray", "Fenerbahçe", "Beşiktaş", "Trabzonspor", "Başakşehir", 
+        "Kasımpaşa", "Göztepe", "Samsunspor", "Alanyaspor", "Rizespor","Çorum FK",
+        "Amed SK","Erzurumspor FK","Eyüpspor","Gençlerbirliği","Gaziantep FK","Kocaelispor","Konyaspor"
+    ],
+    "Türkiye Trendyol 1. Lig": [
+        "Ankara Keçiörengücü", "Antalyaspor", "Bandırmaspor", "Batman Petrolspor", 
+        "Bodrum", "Boluspor", "Bursaspor", "Esenler Erokspor", "Fatih Karagümrük",
+        "Iğdır","İstanbulspor","Kayserispor","Manisa","Mardin 1969","Muğlaspor","Pendikspor","Sarıyer","Sivasspor",
+        "Ümraniyespor","Vanspor"
+    ],
+    "İngiltere Premier Lig": [
+        "Arsenal", "Aston Villa", "Bournemouth", "Brentford", "Brighton & Hove Albion", 
+        "Chelsea", "Coventry City", "Crystal Palace", "Everton", "Fulham",
+        "Hull City","Ipswich Town","Leeds United","Liverpool","Manchester City",
+        "Manchester United","Newcastle United","Nottingham Forest","Sunderland","Tottenham Hotspur"
+    ],
+    "İngiltere Championship": [
+        "Blackburn Rovers", "Bristol City", "Burnley", "Cardiff City", "Birmingham City",
+        "Derby County", "Lincoln City", "Bolton Wanderers", "Charlton Athletic",
+        "Middlesbrough", "Millwall", "Norwich City",
+        "Portsmouth", "Preston North End", "Queens Park Rangers", "Sheffield United",
+        "Stoke City", "", "Swansea City", "Watford", "West Bromwich Albion",
+        "Wolverhampton Wanderers","West Ham United","Wrexham","Southampton"
+    ],
+    "İtalya Serie B": [
+        "Verona", "Avellino", "Carrarese", "Catanzaro", "Cesena",
+        "Padova", "Virtus Entella", "Empoli", "Juve Stabia", "Mantova",
+        "Modena", "Pisa", "LR Vicenza", "Salernitana", "Sampdoria",
+        "Benevento", "Arezzo", "Sudtirol"
+    ],
+    "İtalya Serie A": [
+        "AC Milan", "AS Roma", "Atalanta", "Bologna", "Cagliari",
+        "Como", "", "Frosinone", "Fiorentina", "Genoa",
+        "Inter", "Juventus", "Lazio", "Lecce", "Sassuolo",
+        "Napoli", "Palermo", "Parma", "Torino", "Udinese",
+        "Venezia", "Monza"
+    ],
+    "İspanya Segunda Division": [
+        "Albacete", "Almeria", "Burgos", "Cadiz", "Andorra",
+        "Castellon", "Cordoba", "Celta Fortuna", "Eibar", "Ceuta",
+        "Eldense", "Girona", "Granada", "Las Palmas", "Leganés",
+        "Mallorca", "Oviedo", "Real Sociedad B", "Tenerife", "Sabadell",
+        "Sporting Gijón","Valladolid"
+    ],
+    "İspanya La Liga": [
+        "Alaves", "Athletic Bilbao", "Atletico Madrid", "Barcelona", "Celta Vigo",
+        "Espanyol", "Getafe", "Elche", "Deportivo La Coruña", "Leganes",
+        "Mallorca", "Osasuna", "Racing Santander", "Rayo Vallecano", "Real Betis",
+        "Real Madrid", "Real Oviedo", "Real Sociedad", "Sevilla", "Valencia",
+        "Levante", "Villarreal"
+    ],
+    "Almanya Bundesliga": [
+        "Augsburg", "Bayer Leverkusen", "Bayern Münih", "Borussia Dortmund", "Borussia Mönchengladbach",
+        "Eintracht Frankfurt", "Freiburg", "Elversberg", "Hoffenheim", "Hamburg",
+        "Mainz 05", "RB Leipzig", "Köln", "Paderborn 07", "Stuttgart",
+        "Union Berlin", "Schalke 04", "Werder Bremen"
+    ],
+}
+
+def lig_degisti(event):
+    """Lig seçildiğinde ev sahibi ve deplasman takımlarının listesini günceller"""
+    secilen_lig = lig_kutusu.get()
+    
+    if secilen_lig in LIG_VERITABANI:
+        takimlar = LIG_VERITABANI[secilen_lig]
+        
+        # Ev sahibi ve Deplasman kutularının listesini güncelle
+        ev_sahibi_kutusu['values'] = takimlar
+        deplasman_kutusu['values'] = takimlar
+        
+        # Kutuların içindeki eski yazıları temizle ve ilk takımı seçtir
+        ev_sahibi_kutusu.set("Takım Seçiniz...")
+        deplasman_kutusu.set("Takım Seçiniz...")
+
+# --- HİBRİT LİG VE TAKIM SEÇİM ALANI ---
+st.sidebar.markdown("### 🏟️ Müsabaka Seçim Odası")
+
+# 1. Lig Seçimi (En sona "Diğer" ekledik kanka)
+lig_listesi = list(LIG_VERITABANI.keys()) + ["🌍 Diğer / Listede Olmayan Lig"]
+secilen_lig = st.sidebar.selectbox("Ligi Seç kanka:", lig_listesi)
+
+# 2. Ev Sahibi Alanı
+if secilen_lig == "🌍 Diğer / Listede Olmayan Lig":
+    # Lig listede yoksa mecbur el yazısıyla yazdırıyoruz
+    ev_sahibi = st.sidebar.text_input("Ev Sahibi Takım Adı:", "Ev Sahibi")
+else:
+    # Lig varsa, takımların en başına "Kendim Yazacağım" seçeneği koyuyoruz
+    ev_secenekleri = ["✍️ Kendim Yazacağım..."] + LIG_VERITABANI[secilen_lig]
+    ev_secim = st.sidebar.selectbox("Ev Sahibi Takım:", ev_secenekleri, index=1) # Varsayılan ilk takım gelsin
+    
+    if ev_secim == "✍️ Kendim Yazacağım...":
+        ev_sahibi = st.sidebar.text_input("Ev Sahibi Takım Adını Gir kanka:")
+    else:
+        ev_sahibi = ev_secim
+
+# 3. Deplasman Alanı
+if secilen_lig == "🌍 Diğer / Listede Olmayan Lig":
+    deplasman = st.sidebar.text_input("Deplasman Takım Adı:", "Deplasman")
+else:
+    dep_secenekleri = ["✍️ Kendim Yazacağım..."] + LIG_VERITABANI[secilen_lig]
+    dep_secim = st.sidebar.selectbox("Deplasman Takımı:", dep_secenekleri, index=2) # Varsayılan ikinci takım gelsin
+    
+    if dep_secim == "✍️ Kendim Yazacağım...":
+        deplasman = st.sidebar.text_input("Deplasman Takım Adını Gir kanka:")
+    else:
+        deplasman = dep_secim
+
+# Kodunun devamında takım ismi basılan yerler otomatik olarak bu 'ev_sahibi' ve 'deplasman' değişkenlerini kullanacak kanka.
+# --- Arayüz Kurulumu ---
+root = tk.Tk()
+root.title("Futbol Analiz - Lig/Takım Seçimi")
+root.geometry("450x300")
+
+# 1. LİG SEÇİM BÖLÜMÜ
+lbl_lig = tk.Label(root, text="Lütfen Lig Seçiniz:", font=("Arial", 10, "bold"))
+lbl_lig.pack(pady=5)
+
+lig_kutusu = ttk.Combobox(root, values=list(LIG_VERITABANI.keys()), state="readonly", width=35)
+lig_kutusu.pack(pady=5)
+# Lig değiştiğinde tetiklenecek fonksiyonu bağlıyoruz
+lig_kutusu.bind("<<ComboboxSelected>>", lig_degisti)
+
+
+# 2. EV SAHİBİ SEÇİM BÖLÜMÜ
+lbl_ev = tk.Label(root, text="Ev Sahibi Takım:")
+lbl_ev.pack(pady=5)
+
+ev_sahibi_kutusu = ttk.Combobox(root, state="readonly", width=30)
+ev_sahibi_kutusu.set("Önce Lig Seçiniz")
+ev_sahibi_kutusu.pack(pady=5)
+
+
+# 3. DEPLASMAN SEÇİM BÖLÜMÜ
+lbl_dep = tk.Label(root, text="Deplasman Takımı:")
+lbl_dep.pack(pady=5)
+
+deplasman_kutusu = ttk.Combobox(root, state="readonly", width=30)
+deplasman_kutusu.set("Önce Lig Seçiniz")
+deplasman_kutusu.pack(pady=5)
+
+
+# Test için veri çekme butonu
+def analizi_baslat():
+    print(f"Seçilen Lig: {lig_kutusu.get()}")
+    print(f"Ev Sahibi: {ev_sahibi_kutusu.get()}")
+    print(f"Deplasman: {deplasman_kutusu.get()}")
+
+btn = tk.Button(root, text="Seçimleri Onayla", command=analizi_baslat, bg="green", fg="white")
+btn.pack(pady=20)
+
+root.mainloop()
 # --- PREMIUM GÖRSEL ARYÜZ TASARIMI (CSS) ---
 st.markdown("""
     <style>
