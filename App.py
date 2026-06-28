@@ -20,7 +20,7 @@ if not os.path.exists(DB_FILE):
 
 KUPON_DB_FILE = "kuponlar_gunlugu.csv"
 if not os.path.exists(KUPON_DB_FILE):
-    pd.DataFrame(columns=["Kupon_ID", "Mac_IDleri", "Mac_Detaylari", "Yatirilan_Tutar", "Durum"]).to_csv(KUPON_DB_FILE, index=False)
+    pd.DataFrame(columns=["Kupon_ID", "Mac_Detaylari", "Yatirilan_Tutar", "Durum", "Tarih"]).to_csv(KUPON_DB_FILE, index=False)
 
 # --- 📐 KUSURSUZ POISSON MOTORU (PROFESYONEL LİMİT: 11) ---
 def poisson_olasilik(k, lmbda):
@@ -351,7 +351,7 @@ else:
 if kg_var_olasilik >= 58:
     yorum_cumleleri.append(
         f"Karşılıklı Gol Var (KG Var) ihtimalinin %{kg_var_olasilik:.1f} seviyesinde seyretmesi, iki takımın da "
-        f"üçüncü bölgedeki bitiricilik kalitesini doğrular niteliktedir. Defansif zaafiyetler and hücum iştahı, "
+        f"üçüncü bölgedeki bitiricilik kalitesini doğrular niteliktedir. Defansif zaafiyetler ve hücum iştahı, "
         f"skor tabelasının çift taraflı değişme olasılığını maksimuma yaklaştırıyor."
     )
 elif kg_var_olasilik <= 42:
@@ -453,7 +453,6 @@ with sekme1:
 with sekme2:
     st.markdown('<div class="badge">SEZGİN GÖRMÜŞ ANALİZ MERKEZİ v7.0</div>', unsafe_allow_html=True)
     st.title("🗂️ Profesyonel Analiz Arşivi & Performans Takip Laboratuvarı")
-    st.write("Veritabanına mühürlenmiş geçmiş tahminlerinizi yönetin, sistem verimliliğini và başarı indeksini analiz edin.")
     
     df_logs = pd.read_csv(DB_FILE)
     
@@ -461,6 +460,7 @@ with sekme2:
         st.info("Arşiv veritabanı henüz boş kanka. İlk analizini kaydedince burası şenlenecek!")
     else:
         toplam_mac = len(df_logs)
+        kazananlar = len(df_logs[df_logs["Sonuc"] == "KAZANDI ✅"].shape[0]) if "KAZANDI ✅" in df_logs["Sonuc"].values else 0
         kazananlar = len(df_logs[df_logs["Sonuc"] == "KAZANDI ✅"])
         kaybedenler = len(df_logs[df_logs["Sonuc"] == "KAYBETTİ ❌"])
         bekleyenler = len(df_logs[df_logs["Sonuc"] == "Bekliyor"])
@@ -469,14 +469,10 @@ with sekme2:
         basari_orani = (kazananlar / sonuclanmis * 100) if sonuclanmis > 0 else 0.0
         
         m_col1, m_col2, m_col3, m_col4 = st.columns(4)
-        with m_col1:
-            st.metric(label="📊 Toplam Analiz Edilen Müsabaka", value=toplam_mac)
-        with m_col2:
-            st.metric(label="🔥 Model Başarı Endeksi", value=f"%{basari_orani:.1f}")
-        with m_col3:
-            st.metric(label="⏳ Sonuç Bekleyen Tahminler", value=bekleyenler)
-        with m_col4:
-            st.metric(label="🎯 İsabetli / Yatan Müsabaka", value=f"{kazananlar} / {kaybedenler}")
+        with m_col1: st.metric(label="📊 Toplam Analiz Edilen Müsabaka", value=toplam_mac)
+        with m_col2: st.metric(label="🔥 Model Başarı Endeksi", value=f"%{basari_orani:.1f}")
+        with m_col3: st.metric(label="⏳ Sonuç Bekleyen Tahminler", value=bekleyenler)
+        with m_col4: st.metric(label="🎯 İsabetli / Yatan Müsabaka", value=f"{kazananlar} / {kaybedenler}")
             
         st.write("---")
         st.markdown("### 🔍 Akıllı Filtreleme ve Arama")
@@ -494,8 +490,108 @@ with sekme2:
             
         st.dataframe(df_goster, use_container_width=True)
 
+        # --- ARŞİV GÜNCELLEME VE SİLME ODASI ---
+        st.markdown("### ⚙️ Maç Durumu Güncelleme ve Yönetim")
+        if len(df_goster) > 0:
+            seçilen_index = st.selectbox("Durumunu Güncellemek İstediğin Maçın Satır Numarası (Index):", df_goster.index)
+            yeni_durum = st.selectbox("Yeni Sonuç Değeri:", ["Bekliyor", "KAZANDI ✅", "KAYBETTİ ❌"])
+            
+            c_g1, c_g2 = st.columns(2)
+            with c_g1:
+                if st.button("🔄 Durumu Güncelle"):
+                    df_logs.at[seçilen_index, "Sonuc"] = yeni_durum
+                    df_logs.to_csv(DB_FILE, index=False)
+                    st.success("Maç sonucu başarıyla güncellendi kanka!")
+                    st.rerun()
+            with c_g2:
+                if st.button("🗑️ Bu Analizi Veritabanından Sil"):
+                    df_logs = df_logs.drop(seçilen_index).reset_index(drop=True)
+                    df_logs.to_csv(DB_FILE, index=False)
+                    st.warning("Analiz kaydı arşivden tamamen silindi!")
+                    st.rerun()
+
 # --- SEKME 3: KUPON ODASI ---
 with sekme3:
-    st.markdown('<div class="badge">🎟️ KUPON MERKEZİ</div>', unsafe_allow_html=True)
-    st.title("🎟️ Kupon Odası")
-    st.info("Kupon yönetim alanı aktif kanka.")
+    st.markdown('<div class="badge">🎟️ KUPON YÖNETİM MERKEZİ v7.0</div>', unsafe_allow_html=True)
+    st.title("🎟️ Kupon Odası & Kasa Takip Laboratuvarı")
+    st.write("Mühürlenen maç analizlerinizle oluşturduğunuz kuponları buraya kaydederek kasa yönetiminizi profesyonelce takip edin.")
+    
+    df_kuponlar = pd.read_csv(KUPON_DB_FILE)
+    df_logs = pd.read_csv(DB_FILE)
+    
+    k_col1, k_col2 = st.columns([1, 1])
+    
+    with k_col1:
+        st.markdown('<div class="premium-card">', unsafe_allow_html=True)
+        st.subheader("➕ Yeni Kupon Mühürle")
+        
+        if len(df_logs) == 0:
+            st.warning("Kupona maç ekleyebilmek için önce Analiz Ekranından maç kaydedip arşive eklemelisin kanka.")
+        else:
+            # Aktif veya bekleyen maç listesinden seçim yaptırıyoruz
+            mac_secenekleri = df_logs["Ev Sahibi"] + " vs " + df_logs["Deplasman"] + " (" + df_logs["Onerilen_Bahis"] + ")"
+            secilen_maclar = st.multiselect("Kupona Dahil Edilecek Maçları Seç kanka:", mac_secenekleri)
+            
+            yatirilan_para = st.number_input("Yatırılan Tutar (TL):", min_value=10, value=100, step=10)
+            kupon_durumu = st.selectbox("Kupon Güncel Durumu:", ["Bekliyor", "TUTTU 🎉", "YATTI ❌"])
+            
+            if st.button("🎟️ Kuponu Veritabanına İşle"):
+                if len(secilen_maclar) == 0:
+                    st.error("En az 1 maç seçmelisin kanka!")
+                else:
+                    df_kp = pd.read_csv(KUPON_DB_FILE)
+                    yeni_id = f"KPN-{len(df_kp) + 1001}"
+                    maclar_str = " | ".join(secilen_maclar)
+                    
+                    yeni_kupon = {
+                        "Kupon_ID": yeni_id,
+                        "Mac_Detaylari": maclar_str,
+                        "Yatirilan_Tutar": yatirilan_para,
+                        "Durum": kupon_durumu,
+                        "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M")
+                    }
+                    df_kp = pd.concat([df_kp, pd.DataFrame([yeni_kupon])], ignore_index=True)
+                    df_kp.to_csv(KUPON_DB_FILE, index=False)
+                    st.success(f"{yeni_id} Kimlikli Kupon Kasaya Mühürlendi!")
+                    st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with k_col2:
+        st.markdown('<div class="premium-card">', unsafe_allow_html=True)
+        st.subheader("📊 Canlı Kupon Durum Analizi")
+        if len(df_kuponlar) == 0:
+            st.info("Henüz kasaya mühürlenmiş kupon bulunmuyor kanka.")
+        else:
+            toplam_k = len(df_kuponlar)
+            tutan_k = len(df_kuponlar[df_kuponlar["Durum"] == "TUTTU 🎉"])
+            yatan_k = len(df_kuponlar[df_kuponlar["Durum"] == "YATTI ❌"])
+            toplam_yatirilan = df_kuponlar["Yatirilan_Tutar"].sum()
+            
+            st.write(f"📊 Toplam Alınan Kupon: **{toplam_k}**")
+            st.write(f"💰 Toplam Yatırılan Finans: **{toplam_yatirilan} TL**")
+            st.write(f"✅ Tutan: **{tutan_k}** | ❌ Yatan: **{yatan_k}**")
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+    st.write("---")
+    st.markdown("### 📋 Mevcut Kupon Listesi")
+    if len(df_kuponlar) > 0:
+        st.dataframe(df_kuponlar, use_container_width=True)
+        
+        st.markdown("#### ⚙️ Kupon Durumu Revize Odası")
+        k_secilen_id = st.selectbox("Durumunu Değiştirmek İstediğin Kuponun ID'si:", df_kuponlar["Kupon_ID"].values)
+        k_yeni_durum = st.selectbox("Yeni Kupon Durumu Seç:", ["Bekliyor", "TUTTU 🎉", "YATTI ❌"])
+        
+        ck_g1, ck_g2 = st.columns(2)
+        with ck_g1:
+            if st.button("🔄 Kupon Durumunu Güncelle"):
+                idx = df_kuponlar[df_kuponlar["Kupon_ID"] == k_secilen_id].index[0]
+                df_kuponlar.at[idx, "Durum"] = k_yeni_durum
+                df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
+                st.success("Kupon durumu güncellendi!")
+                st.rerun()
+        with ck_g2:
+            if st.button("🗑️ Bu Kuponu Kasadan Sil"):
+                df_kuponlar = df_kuponlar[df_kuponlar["Kupon_ID"] != k_secilen_id].reset_index(drop=True)
+                df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
+                st.warning("Kupon sistemden imha edildi!")
+                st.rerun()
