@@ -4,6 +4,8 @@ import plotly.graph_objects as go
 import os
 import math
 from datetime import datetime
+import numpy as np
+
 # --- SEZGİN GÖRMÜŞ AI PRO v7.0 SAYFA AYARLARI ---
 st.set_page_config(page_title="Sezgin Görmüş Veri Analizi v7.0", page_icon="🔮", layout="wide")
 DB_FILE = "analiz_gunlugu.csv"
@@ -22,19 +24,24 @@ def poisson_olasilik(k, lmbda):
     return (math.exp(-lmbda) * (lmbda**k)) / math.factorial(k)
     
 def mac_simule_et(ev_gol_beklentisi, dep_gol_beklentisi):
-    ms1, beraberlik, ms2 = 0.0, 0.0, 0.0
-    # range(11) ile ekstrem ve çılgın tüm skor varyasyonları (Örn: 5-4, 7-1) olasılık havuzuna dahil edildi.
-    for i in range(11):
-        for j in range(11):
-            p_ev = poisson_olasilik(i, ev_gol_beklentisi)
-            p_dep = poisson_olasilik(j, dep_gol_beklentisi)
-            p_skor = p_ev * p_dep
-            if i > j: ms1 += p_skor
-            elif i == j: beraberlik += p_skor
-            else: ms2 += p_skor
-    toplam = ms1 + beraberlik + ms2
-    if toplam == 0: return 33.3, 33.3, 33.3
-    return (ms1/toplam)*100, (beraberlik/toplam)*100, (ms2/toplam)*100
+    # 100.000 maçlık devasa simülasyon havuzu
+    simulasyon_sayisi = 100000
+    
+    # Bilgisayar, verdiğin xG değerlerine göre arkada rastgele 100.000 maçlık gol sayıları üretiyor
+    ev_goller = np.random.poisson(ev_gol_beklentisi, simulasyon_sayisi)
+    dep_goller = np.random.poisson(dep_gol_beklentisi, simulasyon_sayisi)
+    
+    # 100.000 maçın sonuçları çeteleye işleniyor
+    ms1_sayisi = np.sum(ev_goller > dep_goller)
+    beraberlik_sayisi = np.sum(ev_goller == dep_goller)
+    ms2_sayisi = np.sum(ev_goller < dep_goller)
+    
+    # Yüzdesel oranlar hesaplanıp ana panele gönderiliyor
+    ms1_yuzde = (ms1_sayisi / simulasyon_sayisi) * 100
+    x_yuzde = (beraberlik_sayisi / simulasyon_sayisi) * 100
+    ms2_yuzde = (ms2_sayisi / simulasyon_sayisi) * 100
+    
+    return ms1_yuzde, x_yuzde, ms2_yuzde
 
 # --- PREMIUM GÖRSEL ARYÜZ TASARIMI (CSS) ---
 st.markdown("""
@@ -105,7 +112,7 @@ b_ms2 = st.sidebar.number_input("Bülten Oranı: MS 2", min_value=1.01, value=3.
 
 
 
-# --- ⚙️ SEZGİN GÖRMÜŞ KUSURSUZ MATHEMATICAL MATRIX MOTORU ---
+# --- ⚙️ SEZGİN GÖRMÜŞ SUZ MATHEMATICAL MATRIX MOTORU ---
 
 # 1. Temel Ortalama Hesaplamaları
 
@@ -382,7 +389,7 @@ with sekme1:
 
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
 
-        st.subheader("⚽ Kusursuz Skor & Gol Projeksiyonu")
+        st.subheader("⚽ Maç Öngörüsü")
 
         st.markdown(f'<div class="skor-box">🤖 EN YÜKSEK OLASILIKLI SKOR: {tahmin_ev_skor} - {tahmin_dep_skor}</div>', unsafe_allow_html=True)
 
