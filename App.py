@@ -6,7 +6,7 @@ import math
 from datetime import datetime
 
 # --- SEZGİN GÖRMÜŞ AI PRO v7.0 SAYFA AYARLARI ---
-st.set_page_config(page_title="Sezgin Görmüş Veri Analizi AI PRO v7.0", page_icon="🔮", layout="wide")
+st.set_page_config(page_title="Sezgin Görmüş Veri Analizi v7.0", page_icon="🔮", layout="wide")
 
 DB_FILE = "analiz_gunlugu.csv"
 if not os.path.exists(DB_FILE):
@@ -51,7 +51,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-sekme1, sekme2 = st.tabs(["🔮 Gelişmiş Veri Laboratuvarı", "🗂️ Sezgin Görmüş Analiz Arşivi"])
+sekme1, sekme2 = st.tabs(["🔮 Grms Veri Laboratuvarı", "🗂️ Grms Analiz Arşivi"])
 
 # --- SIDEBAR (KULLANICI DOSTU GELİŞMİŞ PANEL) ---
 st.sidebar.markdown("<h2 style='text-align: center; color: #8b5cf6; margin-bottom: 20px;'>📋 VERİ SEVİYESİ</h2>", unsafe_allow_html=True)
@@ -186,25 +186,82 @@ v_ms2 = ms2_olasilik - (100 / b_ms2)
 
 # --- 🎙️ VERİ TABANLI DETAYLI TEKNİK ANALİZ ÖZETİ ---
 yorum_cumleleri = []
-yorum_cumleleri.append(f"Lig ortalaması olan {lig_ort_gol:.2f} gol baz alınarak yapılan ters xG modellemesinde; {ev_sahibi} için net üretkenlik xG'si {ev_xg:.2f}, {deplasman} için ise {dep_xg:.2f} olarak saptanmıştır.")
 
-if (ev_kritik_eksik + ev_normal_eksik) > (dep_kritik_eksik + dep_normal_eksik):
-    yorum_cumleleri.append(f"Ev sahibindeki eksik oyuncu yükü taktiksel esnekliği daraltıyor, bu durum model çıktısına xG kırılması olarak yansıtıldı.")
-elif (dep_kritik_eksik + dep_normal_eksik) > (ev_kritik_eksik + ev_normal_eksik):
-    yorum_cumleleri.append(f"Deplasman ekibinin kadro derinliğindeki eksikler, deplasman direncini matematiksel olarak aşağı çekiyor.")
+# 1. Paragraf: Giriş ve Saf Hücum/Savunma Dengesi
+yorum_cumleleri.append(
+    f"📊 **Matematiksel Projeksiyon Raporu:** Lig genelindeki {lig_ort_gol:.2f} gol ortalaması ters xG süzgecinden geçirildiğinde; "
+    f"{ev_sahibi} ekibinin bu sahada üretebileceği net gol beklentisi **{ev_xg:.2f} xG** olarak hesaplanırken, "
+    f"misafir takım {deplasman} için bu eşik **{dep_xg:.2f} xG** seviyesinde kalibre edilmiştir. "
+    f"Bu durum, saha avantajı ve form dalgalanmalarının tahtaya doğrudan yansımasıdır."
+)
 
-if ust_olasilik >= 58:
-    yorum_cumleleri.append(f"Genişletilmiş Poisson havuzunda %{ust_olasilik:.1f}'lik baskın bir 2.5 Üst trendi yakalandı, iki takımın hücum katsayıları lig ortalamasının üzerinde.")
-elif ust_olasilik <= 42:
-    yorum_cumleleri.append(f"Düşük tempolu kilit oyun eğilimi yüksek. %{100-ust_olasilik:.1f} ihtimalle savunma katsayılarının ağır basacağı bir 90 dakika öngörülüyor.")
+# 2. Paragraf: Maç Sonucu ve Güç Dengesi Yorumu (PPG ve xG Farkı Analizi)
+xg_farki = ev_xg - dep_xg
+if abs(xg_farki) >= 0.70:
+    baskin_takim = ev_sahibi if xg_farki > 0 else deplasman
+    yorum_cumleleri.append(
+        f"⚖️ **Güç Asimetrisi:** İki takımın dinamik katsayıları arasında ciddi bir uçurum söz konusu. "
+        f"🧬 Matematiksel model, {baskin_takim} tarafının oyun gücünü rakibine kıyasla çok net üstün görüyor. "
+        f"Maç başına düşen iç/dış saha puan verimlilikleri (PPG) karşılaştırıldığında, bu maçı domine etmesi beklenen taraf bariz şekilde kendini belli ediyor."
+    )
+elif abs(xg_farki) >= 0.25:
+    favori_takim = ev_sahibi if xg_farki > 0 else deplasman
+    yorum_cumleleri.append(
+        f"⚖️ **Taktiksel Avantaj:** Dengeli ama bir tarafın hafifçe öne çıktığı bir eşleşme. "
+        f"{favori_takim}, hem son dönemdeki gol ritmi hem de savunma direnciyle ibreyi milimetrik farklarla kendi lehine çevirmiş durumda. "
+        f"Oyunun kırılma anlarında bu küçük xG üstünlüğü tabelayı belirleyebilir."
+    )
+else:
+    yorum_cumleleri.append(
+        f"⚖️ **Denge Noktası:** İki ekibin hem dönemsel form grafiği hem de sezon geneli varyansları birbirine adeta ayna tutuyor. "
+        f"Matematiksel olarak tam bir kilitlenme ve taktik savaşı öngörülüyor. Sürpriz hamleler veya bireysel hatalar olmaması durumunda maçın dengeden kopması oldukça zor."
+    )
 
-nihai_yorum = " ".join(yorum_cumleleri)
+# 3. Paragraf: Gol Pazarı, Temizlik ve KG Analizi
+if ust_olasilik >= 60:
+    yorum_cumleleri.append(
+        f"⚽ **Gol Patlaması Eğilimi:** Genişletilmiş Poisson havuzunda **%{ust_olasilik:.1f}** gibi çok baskın bir 2.5 Üst ihtimali filizlenmiş durumda. "
+        f"İki takımın da arkada boşluk bırakan, önde ise lig standartlarının üzerinde birer hücum katsayısına sahip olması, "
+        f"izleme zevki yüksek ve tempolu bir 90 dakikaya işaret ediyor. Karşılıklı Gol (KG Var) seçeneği de bu denklemde ciddi şekilde destekleniyor (%{kg_var_olasilik:.1f})."
+    )
+elif ust_olasilik <= 40:
+    yorum_cumleleri.append(
+        f"🛡️ **Savunma Kilidi Eğimli:** Model, %{100-ust_olasilik:.1f} ihtimalle bu müsabakanın düşük tempolu ve taktik disipline sadık bir düzlemde geçeceğini söylüyor. "
+        f"İki takımın da savunma katsayıları lig ortalamasının altında hata payı barındırıyor. Erken bir gol gelmediği sürece oyunun orta saha mücadelesine sıkışması kuvvetle muhtemel."
+    )
+else:
+    yorum_cumleleri.append(
+        f"🎯 **Standart Gol Eğrisi:** Gol piyasasında her iki yöne de esneyebilecek bir denge hakim. **%{ust_olasilik:.1f}** 2.5 Üst şansı, "
+        f"takımların birbirini tartacağı bir ilk yarıya ve ikinci yarıda çözülecek bir oyuna delalet ediyor."
+    )
+
+# 4. Paragraf: Değerli Oran (Value) Kapanışı
+en_degerli_pazar = None
+en_yuksek_v = -99.0
+for p_adi, v_val in [("MS 1", v_ms1), ("Beraberlik", v_x), ("MS 2", v_ms2), ("2.5 Üst", v_ust)]:
+    if v_val > en_yuksek_v:
+        en_yuksek_v = v_val
+        en_degerli_pazar = p_adi
+
+if en_yuksek_v > 0:
+    yorum_cumleleri.append(
+        f"🚨 **Matematiksel Value Sinyali:** Bülten oranları ile Poisson simülasyonu karşılaştırıldığında, "
+        f"piyasadaki en büyük fiyat hatasının **{en_degerli_pazar}** pazarında olduğu saptanmıştır. "
+        f"Sistem, bu seçeneğe açılan oranın, risk-kazanç paritesinde kesinlikle kaçırılmaması gereken bir 'Value' (Değerli) fırsat barındırdığını mühürler."
+    )
+else:
+    yorum_cumleleri.append(
+        f"🚨 **Piyasa Kontrolü:** Bülten oranları, modelin olasılık havuzuyla oldukça paralel açılmış. "
+        f"Gözü kapalı risk almak yerine, kararlılık oranı en yüksek olan ana stratejiye sadık kalmak kasayı korumak adına en mantıklı senaryodur."
+    )
+
+nihai_yorum = " \n\n ".join(yorum_cumleleri)
 
 
 # --- KULLANICI DOSTU ANA PANEL ---
 with sekme1:
-    st.markdown('<div class="badge">SEZGİN GÖRMÜŞ VERİ ANALİZİ AI v7.0 PRO</div>', unsafe_allow_html=True)
-    st.title("📊 Sezgin Görmüş Matematiksel Tahmin & Risk Robotu")
+    st.markdown('<div class="badge">SEZGİN GÖRMÜŞ VERİ ANALİZİ v7.0 </div>', unsafe_allow_html=True)
+    st.title("📊 Sezgin Görmüş Matematiksel Tahmin Robotu")
     st.write(f"Sistem stabilizasyonu tamamlandı. Profesyonel Ev xG: **{ev_xg:.2f}** | Profesyonel Deplasman xG: **{dep_xg:.2f}**")
     
     col_sol, col_sag = st.columns([11, 10])
