@@ -102,6 +102,21 @@ dep_son5_yedigi = st.sidebar.number_input("Son 5 Maçta Dışarıda Yediği Gol"
 dep_cs = st.sidebar.slider("Deplasman Son 5 Maçta Gol Yemediği Maç Sayısı", 0, 5, 1)
 dep_onem = st.sidebar.slider("Deplasmanın Maç Önem Derecesi (1-5)", 1, 5, 4)
 
+st.sidebar.markdown("### 🏆 Genel Lig İstatistikleri")
+col_genel1, col_genel2 = st.sidebar.columns(2)
+
+with col_genel1:
+    st.markdown("**Ev Sahibi (Genel)**")
+    ev_genel_mac = st.number_input("Toplam Maç (Ev)", min_value=1, value=20, step=1)
+    ev_genel_attigi = st.number_input("Toplam Attığı Gol (Ev)", min_value=0, value=35, step=1)
+    ev_genel_yedigi = st.number_input("Toplam Yediği Gol (Ev)", min_value=0, value=20, step=1)
+
+with col_genel2:
+    st.markdown("**Deplasman (Genel)**")
+    dep_genel_mac = st.number_input("Toplam Maç (Dep)", min_value=1, value=20, step=1)
+    dep_genel_attigi = st.number_input("Toplam Attığı Gol (Dep)", min_value=0, value=25, step=1)
+    dep_genel_yedigi = st.number_input("Toplam Yediği Gol (Dep)", min_value=0, value=28, step=1)
+
 st.sidebar.write("---")
 st.sidebar.markdown("### 🛡️ Sağlık & Kadro Eksik Raporu")
 ev_kritik_eksik = st.sidebar.slider("Ev Sahibi Kritik Eksik (As Kaleci, Golcü vb.)", 0, 3, 0)
@@ -117,106 +132,75 @@ b_ms2 = st.sidebar.number_input("Bülten Oranı: MS 2", min_value=1.01, value=3.
 
 
 
-# --- ⚙️ SEZGİN GÖRMÜŞ SUZ MATHEMATICAL MATRIX MOTORU ---
+# --- ⚙️ SEZGİN GÖRMÜŞ KUSURSUZ MATHEMATICAL MATRIX MOTORU ---
+# 1. İç/Dış Saha Temel Hücum ve Savunma Metrikleri
+ev_ic_hucum_ort = ev_toplam_gol / ev_ic_mac
+ev_ic_savunma_ort = ev_toplam_yenen / ev_ic_mac
+dep_dis_hucum_ort = dep_toplam_gol / dep_dis_mac
+dep_dis_savunma_ort = dep_toplam_yenen / dep_dis_mac
 
-# 1. Temel Ortalama Hesaplamaları
+# 2. Form (Son 5 Maç) Metrikleri
+ev_son5_hucum_ort = ev_son5_attigi / 5
+ev_son5_savunma_ort = ev_son5_yedigi / 5
+dep_son5_hucum_ort = dep_son5_attigi / 5
+dep_son5_savunma_ort = dep_son5_yedigi / 5
 
-ev_genel_hucum = ev_toplam_gol / ev_ic_mac
+# 3. Genel Lig Performans Metrikleri
+ev_genel_hucum_ort = ev_genel_attigi / ev_genel_mac
+ev_genel_savunma_ort = ev_genel_yedigi / ev_genel_mac
+dep_genel_hucum_ort = dep_genel_attigi / dep_genel_mac
+dep_genel_savunma_ort = dep_genel_yedigi / dep_genel_mac
 
-ev_genel_savunma = ev_toplam_yenen / ev_ic_mac
+# 4. Dinamik Süreç Entegrasyonu (Sezon vs Form Ağırlığı)
+ev_dinamik_ic_hucum = (ev_ic_hucum_ort * sezon_agirligi) + (ev_son5_hucum_ort * form_agirligi)
+ev_dinamik_ic_savunma = (ev_ic_savunma_ort * sezon_agirligi) + (ev_son5_savunma_ort * form_agirligi)
+dep_dinamik_dis_hucum = (dep_dis_hucum_ort * sezon_agirligi) + (dep_son5_hucum_ort * form_agirligi)
+dep_dinamik_dis_savunma = (dep_dis_savunma_ort * sezon_agirligi) + (dep_son5_savunma_ort * form_agirligi)
 
-dep_genel_hucum = dep_toplam_gol / dep_dis_mac
+# 5. Clean Sheet Filtresi
+ev_dinamik_ic_savunma *= (1.0 - (ev_cs * 0.03))
+dep_dinamik_dis_savunma *= (1.0 - (dep_cs * 0.03))
 
-dep_genel_savunma = dep_toplam_yenen / dep_dis_mac
-
-
-
-ev_son5_hucum = ev_son5_attigi / 5
-
-ev_son5_savunma = ev_son5_yedigi / 5
-
-dep_son5_hucum = dep_son5_attigi / 5
-
-dep_son5_savunma = dep_son5_yedigi / 5
-
-
-
-# 2. Dinamik Süreç Entegrasyonu (Kullanıcı Ayarlı Ağırlık Dengelemesi)
-
-ev_dinamik_hucum = (ev_genel_hucum * sezon_agirligi) + (ev_son5_hucum * form_agirligi)
-
-ev_dinamik_savunma = (ev_genel_savunma * sezon_agirligi) + (ev_son5_savunma * form_agirligi)
-
-dep_dinamik_hucum = (dep_genel_hucum * sezon_agirligi) + (dep_son5_hucum * form_agirligi)
-
-dep_dinamik_savunma = (dep_genel_savunma * sezon_agirligi) + (dep_son5_savunma * form_agirligi)
-
-
-
-# 3. Clean Sheet Çift Sayım Filtresi (Yumuşatılmış Etki)
-
-ev_dinamik_savunma *= (1.0 - (ev_cs * 0.03))
-
-dep_dinamik_savunma *= (1.0 - (dep_cs * 0.03))
-
-
-
-# 4. Profesyonel Lig Başı Oranlama ve Ters Metrik Optimizasyonu
-
+# 6. Lig Başı Oranlama Katsayıları (İç/Dış Odaklı)
 yarim_lig_ort = lig_ort_gol / 2
+ev_ic_hucum_katsayi = ev_dinamik_ic_hucum / max(yarim_lig_ort, 0.1)
+dep_dis_savunma_katsayi = dep_dinamik_dis_savunma / max(yarim_lig_ort, 0.1)
+dep_dis_hucum_katsayi = dep_dinamik_dis_hucum / max(yarim_lig_ort, 0.1)
+ev_ic_savunma_katsayi = ev_dinamik_ic_savunma / max(yarim_lig_ort, 0.1)
 
-ev_hucum_katsayi = ev_dinamik_hucum / max(yarim_lig_ort, 0.1)
+# 7. Lig Başı Oranlama Katsayıları (Genel Lig Odaklı)
+ev_genel_hucum_katsayi = ev_genel_hucum_ort / max(yarim_lig_ort, 0.1)
+dep_genel_savunma_katsayi = dep_genel_savunma_ort / max(yarim_lig_ort, 0.1)
+dep_genel_hucum_katsayi = dep_genel_hucum_ort / max(yarim_lig_ort, 0.1)
+ev_genel_savunma_katsayi = ev_genel_savunma_ort / max(yarim_lig_ort, 0.1)
 
-dep_savunma_katsayi = dep_dinamik_savunma / max(yarim_lig_ort, 0.1)
-
-
-
-dep_hucum_katsayi = dep_dinamik_hucum / max(yarim_lig_ort, 0.1)
-
-ev_savunma_katsayi = ev_dinamik_savunma / max(yarim_lig_ort, 0.1)
-
-
-
-# 5. Stabilize Edilmiş PPG (Puan) Dengesi (Maksimum %15 Etki Marjı ile Yumuşatıldı)
-
+# 8. Stabilize Edilmiş PPG (Puan) Dengesi
 ev_ppg = ev_ic_puan / ev_ic_mac
-
 dep_ppg = dep_dis_puan / dep_dis_mac
-
 puan_orani = ev_ppg / max((ev_ppg + dep_ppg), 0.1)
+puan_denge_carpan = 0.85 + (puan_orani * 0.30)
 
-puan_denge_carpan = 0.85 + (puan_orani * 0.30)  # [0.85 - 1.15] Aralığında dengeli etki
-
-
-
-# 6. Motivasyon ve Önem Derecesi Katsayısı
-
+# 9. Motivasyon ve Kadro Eksik Metrisleri
 onem_farki = ev_onem - dep_onem
-
 ev_onem_carpan = 1.0 + (onem_farki * 0.03)
-
 dep_onem_carpan = 1.0 - (onem_farki * 0.03)
-
-
-
-# 7. Kadro Eksik Metrisi (Kritik ve Normal Eksikler Ayrı Ağırlıklandırıldı)
-
 ev_kadro_cezasi = (ev_kritik_eksik * 0.22) + (ev_normal_eksik * 0.08)
-
 dep_kadro_cezasi = (dep_kritik_eksik * 0.22) + (dep_normal_eksik * 0.08)
 
+# 10. Çift Yönlü xG Modellemesi
+# Temel İç/Dış Projeksiyonu
+ev_ic_xg = (yarim_lig_ort * ev_ic_hucum_katsayi * dep_dis_savunma_katsayi)
+dep_dis_xg = (yarim_lig_ort * dep_dis_hucum_katsayi * ev_ic_savunma_katsayi)
 
+# Temel Genel Lig Projeksiyonu
+ev_genel_xg = (yarim_lig_ort * ev_genel_hucum_katsayi * dep_genel_savunma_katsayi)
+dep_genel_xg = (yarim_lig_ort * dep_genel_hucum_katsayi * ev_genel_savunma_katsayi)
 
-# 8. Nihai Profesyonel xG Tahmin Çıktıları
-
-ev_xg = (yarim_lig_ort * ev_hucum_katsayi * dep_savunma_katsayi) * puan_denge_carpan * ev_onem_carpan - ev_kadro_cezasi
-
-dep_xg = (yarim_lig_ort * dep_hucum_katsayi * ev_savunma_katsayi) * (2.0 - puan_denge_carpan) * dep_onem_carpan - dep_kadro_cezasi
-
-
+# 11. Hibrit xG Birleştirme (%50 İç-Dış Etkisi + %50 Genel Lig Karakteri) ve Çarpanlar
+ev_xg = ((ev_ic_xg * 0.5) + (ev_genel_xg * 0.5)) * puan_denge_carpan * ev_onem_carpan - ev_kadro_cezasi
+dep_xg = ((dep_dis_xg * 0.5) + (dep_genel_xg * 0.5)) * (2.0 - puan_denge_carpan) * dep_onem_carpan - dep_kadro_cezasi
 
 ev_xg = max(ev_xg, 0.05)
-
 dep_xg = max(dep_xg, 0.05)
 
 
