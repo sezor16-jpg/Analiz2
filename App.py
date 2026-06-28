@@ -8,6 +8,7 @@ import numpy as np
 
 # --- SEZGİN GÖRMÜŞ AI PRO v7.0 SAYFA AYARLARI ---
 st.set_page_config(page_title="Sezgin Görmüş Veri Analizi v7.0", page_icon="🔮", layout="wide")
+
 DB_FILE = "analiz_gunlugu.csv"
 if not os.path.exists(DB_FILE):
     df = pd.DataFrame(columns=[
@@ -18,37 +19,110 @@ if not os.path.exists(DB_FILE):
     df.to_csv(DB_FILE, index=False)
 
 KUPON_DB_FILE = "kuponlar_gunlugu.csv"
-
-# Eğer kupon veritabanı yoksa otomatik oluşturuyoruz
 if not os.path.exists(KUPON_DB_FILE):
     pd.DataFrame(columns=["Kupon_ID", "Mac_IDleri", "Mac_Detaylari", "Yatirilan_Tutar", "Durum"]).to_csv(KUPON_DB_FILE, index=False)
-# --- 📐 KUSURSUZ POISSON MOTORU (PROFESYONEL LİMİT: 11) ---
 
+# --- 📐 KUSURSUZ POISSON MOTORU (PROFESYONEL LİMİT: 11) ---
 def poisson_olasilik(k, lmbda):
     if lmbda <= 0: return 1.0 if k == 0 else 0.0
     return (math.exp(-lmbda) * (lmbda**k)) / math.factorial(k)
     
 def mac_simule_et(ev_gol_beklentisi, dep_gol_beklentisi):
-    # 100.000 maçlık devasa simülasyon havuzu
     simulasyon_sayisi = 100000
-    
-    # Bilgisayar, verdiğin xG değerlerine göre arkada rastgele 100.000 maçlık gol sayıları üretiyor
     ev_goller = np.random.poisson(ev_gol_beklentisi, simulasyon_sayisi)
     dep_goller = np.random.poisson(dep_gol_beklentisi, simulasyon_sayisi)
     
-    # 100.000 maçın sonuçları çeteleye işleniyor
     ms1_sayisi = np.sum(ev_goller > dep_goller)
     beraberlik_sayisi = np.sum(ev_goller == dep_goller)
     ms2_sayisi = np.sum(ev_goller < dep_goller)
     
-    # Yüzdesel oranlar hesaplanıp ana panele gönderiliyor
     ms1_yuzde = (ms1_sayisi / simulasyon_sayisi) * 100
     x_yuzde = (beraberlik_sayisi / simulasyon_sayisi) * 100
     ms2_yuzde = (ms2_sayisi / simulasyon_sayisi) * 100
     
     return ms1_yuzde, x_yuzde, ms2_yuzde
 
-# --- HİBRİT LİG VE TAKIM SEÇİM ALANI (SAF STREAMLIT) ---
+# 1. BÜYÜK LİG VE TAKIM VERİTABANI
+LIG_VERITABANI = {
+    "Türkiye Trendyol Süper Lig": [
+        "Galatasaray", "Fenerbahçe", "Beşiktaş", "Trabzonspor", "Başakşehir", 
+        "Kasımpaşa", "Göztepe", "Samsunspor", "Alanyaspor", "Rizespor","Çorum FK",
+        "Amed SK","Erzurumspor FK","Eyüpspor","Gençlerbirliği","Gaziantep FK","Kocaelispor","Konyaspor"
+    ],
+    "Türkiye Trendyol 1. Lig": [
+        "Ankara Keçiörengücü", "Antalyaspor", "Bandırmaspor", "Batman Petrolspor", 
+        "Bodrum", "Boluspor", "Bursaspor", "Esenler Erokspor", "Fatih Karagümrük",
+        "Iğdır","İstanbulspor","Kayserispor","Manisa","Mardin 1969","Muğlaspor","Pendikspor","Sarıyer","Sivasspor",
+        "Ümraniyespor","Vanspor"
+    ],
+    "İngiltere Premier Lig": [
+        "Arsenal", "Aston Villa", "Bournemouth", "Brentford", "Brighton & Hove Albion", 
+        "Chelsea", "Coventry City", "Crystal Palace", "Everton", "Fulham",
+        "Hull City","Ipswich Town","Leeds United","Liverpool","Manchester City",
+        "Manchester United","Newcastle United","Nottingham Forest","Sunderland","Tottenham Hotspur"
+    ],
+    "İngiltere Championship": [
+        "Blackburn Rovers", "Bristol City", "Burnley", "Cardiff City", "Birmingham City",
+        "Derby County", "Lincoln City", "Bolton Wanderers", "Charlton Athletic",
+        "Middlesbrough", "Millwall", "Norwich City",
+        "Portsmouth", "Preston North End", "Queens Park Rangers", "Sheffield United",
+        "Stoke City", "Swansea City", "Watford", "West Bromwich Albion",
+        "Wolverhampton Wanderers","West Ham United","Wrexham","Southampton"
+    ],
+    "İtalya Serie B": [
+        "Verona", "Avellino", "Carrarese", "Catanzaro", "Cesena",
+        "Padova", "Virtus Entella", "Empoli", "Juve Stabia", "Mantova",
+        "Modena", "Pisa", "LR Vicenza", "Salernitana", "Sampdoria",
+        "Benevento", "Arezzo", "Sudtirol"
+    ],
+    "İtalya Serie A": [
+        "AC Milan", "AS Roma", "Atalanta", "Bologna", "Cagliari",
+        "Como", "Frosinone", "Fiorentina", "Genoa", "Inter", 
+        "Juventus", "Lazio", "Lecce", "Sassuolo", "Napoli", 
+        "Palermo", "Parma", "Torino", "Udinese", "Venezia", "Monza"
+    ],
+    "İspanya Segunda Division": [
+        "Albacete", "Almeria", "Burgos", "Cadiz", "Andorra",
+        "Castellon", "Cordoba", "Celta Fortuna", "Eibar", "Ceuta",
+        "Eldense", "Girona", "Granada", "Las Palmas", "Leganés",
+        "Mallorca", "Oviedo", "Real Sociedad B", "Tenerife", "Sabadell",
+        "Sporting Gijón","Valladolid"
+    ],
+    "İspanya La Liga": [
+        "Alaves", "Athletic Bilbao", "Atletico Madrid", "Barcelona", "Celta Vigo",
+        "Espanyol", "Getafe", "Elche", "Deportivo La Coruña", "Leganes",
+        "Mallorca", "Osasuna", "Racing Santander", "Rayo Vallecano", "Real Betis",
+        "Real Madrid", "Real Oviedo", "Real Sociedad", "Sevilla", "Valencia",
+        "Levante", "Villarreal"
+    ],
+    "Almanya Bundesliga": [
+        "Augsburg", "Bayer Leverkusen", "Bayern Münih", "Borussia Dortmund", "Borussia Mönchengladbach",
+        "Eintracht Frankfurt", "Freiburg", "Elversberg", "Hoffenheim", "Hamburg",
+        "Mainz 05", "RB Leipzig", "Köln", "Paderborn 07", "Stuttgart",
+        "Union Berlin", "Schalke 04", "Werder Bremen"
+    ],
+}
+
+# --- PREMIUM GÖRSEL ARAYÜZ TASARIMI (CSS) ---
+st.markdown("""
+    <style>
+    .main { background-color: #070a13; }
+    [data-testid="stSidebar"] { background-color: #0d1324; border-right: 1px solid #1e293b; padding-top: 20px; }
+    .premium-card { background: linear-gradient(135deg, #111c34 0%, #080f20 100%); padding: 24px; border-radius: 16px; border: 1px solid #1e293b; margin-bottom: 20px; }
+    .skor-box { background: linear-gradient(90deg, #1e1b4b 0%, #311042 100%); border: 2px dashed #8b5cf6; padding: 15px; border-radius: 12px; text-align: center; font-size: 26px; font-weight: bold; color: #f8fafc; margin: 15px 0; letter-spacing: 1px; }
+    
+    .signal-green { color: #10b981; font-weight: bold; }
+    .signal-red { color: #ef4444; font-weight: bold; }
+    .badge { background: linear-gradient(90deg, #4c1d95 0%, #2563eb 100%); color: #ffffff; padding: 6px 16px; border-radius: 9999px; font-size: 13px; font-weight: bold; display: inline-block; margin-bottom: 12px; border: 1px solid #3b82f6; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3); }
+    .yorum-box { background-color: #0b1329; border-left: 4px solid #8b5cf6; padding: 18px; border-radius: 8px; font-size: 15px; color: #e2e8f0; line-height: 1.6; margin-top: 15px; }
+    </style>
+""", unsafe_allow_html=True)
+
+sekme1, sekme2, sekme3 = st.tabs(["📊 Analiz Ekranı", "🗂️ Arşiv Paneli", "🎟️ Kupon Odası"])
+
+# --- SIDEBAR (KULLANICI DOSTU GELİŞMİŞ PANEL) ---
+st.sidebar.markdown("<h2 style='text-align: center; color: #8b5cf6; margin-bottom: 20px;'>📋 VERİ SEVİYESİ</h2>", unsafe_allow_html=True)
+
 st.sidebar.markdown("### 🏟️ Müsabaka Seçim Odası")
 
 # 1. Lig Seçimi
@@ -78,73 +152,6 @@ else:
         deplasman = st.sidebar.text_input("Deplasman Takım Adını Gir kanka:", "Deplasman")
     else:
         deplasman = dep_secim
-
-# Kodunun devamında takım ismi basılan yerler otomatik olarak bu 'ev_sahibi' ve 'deplasman' değişkenlerini kullanacak kanka.
-# --- Arayüz Kurulumu ---
-root = tk.Tk()
-root.title("Futbol Analiz - Lig/Takım Seçimi")
-root.geometry("450x300")
-
-# 1. LİG SEÇİM BÖLÜMÜ
-lbl_lig = tk.Label(root, text="Lütfen Lig Seçiniz:", font=("Arial", 10, "bold"))
-lbl_lig.pack(pady=5)
-
-lig_kutusu = ttk.Combobox(root, values=list(LIG_VERITABANI.keys()), state="readonly", width=35)
-lig_kutusu.pack(pady=5)
-# Lig değiştiğinde tetiklenecek fonksiyonu bağlıyoruz
-lig_kutusu.bind("<<ComboboxSelected>>", lig_degisti)
-
-
-# 2. EV SAHİBİ SEÇİM BÖLÜMÜ
-lbl_ev = tk.Label(root, text="Ev Sahibi Takım:")
-lbl_ev.pack(pady=5)
-
-ev_sahibi_kutusu = ttk.Combobox(root, state="readonly", width=30)
-ev_sahibi_kutusu.set("Önce Lig Seçiniz")
-ev_sahibi_kutusu.pack(pady=5)
-
-
-# 3. DEPLASMAN SEÇİM BÖLÜMÜ
-lbl_dep = tk.Label(root, text="Deplasman Takımı:")
-lbl_dep.pack(pady=5)
-
-deplasman_kutusu = ttk.Combobox(root, state="readonly", width=30)
-deplasman_kutusu.set("Önce Lig Seçiniz")
-deplasman_kutusu.pack(pady=5)
-
-
-# Test için veri çekme butonu
-def analizi_baslat():
-    print(f"Seçilen Lig: {lig_kutusu.get()}")
-    print(f"Ev Sahibi: {ev_sahibi_kutusu.get()}")
-    print(f"Deplasman: {deplasman_kutusu.get()}")
-
-btn = tk.Button(root, text="Seçimleri Onayla", command=analizi_baslat, bg="green", fg="white")
-btn.pack(pady=20)
-
-root.mainloop()
-# --- PREMIUM GÖRSEL ARYÜZ TASARIMI (CSS) ---
-st.markdown("""
-    <style>
-    .main { background-color: #070a13; }
-    [data-testid="stSidebar"] { background-color: #0d1324; border-right: 1px solid #1e293b; padding-top: 20px; }
-    .premium-card { background: linear-gradient(135deg, #111c34 0%, #080f20 100%); padding: 24px; border-radius: 16px; border: 1px solid #1e293b; margin-bottom: 20px; }
-    .skor-box { background: linear-gradient(90deg, #1e1b4b 0%, #311042 100%); border: 2px dashed #8b5cf6; padding: 15px; border-radius: 12px; text-align: center; font-size: 26px; font-weight: bold; color: #f8fafc; margin: 15px 0; letter-spacing: 1px; }
-    
-    .signal-green { color: #10b981; font-weight: bold; }
-    .signal-red { color: #ef4444; font-weight: bold; }
-    .badge { background: linear-gradient(90deg, #4c1d95 0%, #2563eb 100%); color: #ffffff; padding: 6px 16px; border-radius: 9999px; font-size: 13px; font-weight: bold; display: inline-block; margin-bottom: 12px; border: 1px solid #3b82f6; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3); }
-    .yorum-box { background-color: #0b1329; border-left: 4px solid #8b5cf6; padding: 18px; border-radius: 8px; font-size: 15px; color: #e2e8f0; line-height: 1.6; margin-top: 15px; }
-    </style>
-""", unsafe_allow_html=True)
-
-sekme1, sekme2, sekme3 = st.tabs(["📊 Analiz Ekranı", "🗂️ Arşiv Panelini", "🎟️ Kupon Odası"])
-
-# --- SIDEBAR (KULLANICI DOSTU GELİŞMİŞ PANEL) ---
-st.sidebar.markdown("<h2 style='text-align: center; color: #8b5cf6; margin-bottom: 20px;'>📋 VERİ SEVİYESİ</h2>", unsafe_allow_html=True)
-st.sidebar.markdown("### 🏟️ Müsabaka Bilgileri")
-ev_sahibi = st.sidebar.text_input("Ev Sahibi Takım Adı", "Manchester City")
-deplasman = st.sidebar.text_input("Deplasman Takımı Adı", "Liverpool")
 
 st.sidebar.write("---")
 st.sidebar.markdown("### 🌍 Lig Karakteristiği")
@@ -206,133 +213,89 @@ b_x = st.sidebar.number_input("Bülten Oranı: Beraberlik (X)", min_value=1.01, 
 b_ms2 = st.sidebar.number_input("Bülten Oranı: MS 2", min_value=1.01, value=3.40)
 
 
-
-# --- ⚙️ SEZGİN GÖRMÜŞ KUSURSUZ MATHEMATICAL MATRIX MOTORU ---
-# 1. İç/Dış Saha Temel Hücum ve Savunma Metrikleri
+# --- ⚙️ SEZGİN GÖRMÜŞ MATHEMATICAL MATRIX MOTORU ---
 ev_ic_hucum_ort = ev_toplam_gol / ev_ic_mac
 ev_ic_savunma_ort = ev_toplam_yenen / ev_ic_mac
 dep_dis_hucum_ort = dep_toplam_gol / dep_dis_mac
 dep_dis_savunma_ort = dep_toplam_yenen / dep_dis_mac
 
-# 2. Form (Son 5 Maç) Metrikleri
 ev_son5_hucum_ort = ev_son5_attigi / 5
 ev_son5_savunma_ort = ev_son5_yedigi / 5
 dep_son5_hucum_ort = dep_son5_attigi / 5
 dep_son5_savunma_ort = dep_son5_yedigi / 5
 
-# 3. Genel Lig Performans Metrikleri
 ev_genel_hucum_ort = ev_genel_attigi / ev_genel_mac
 ev_genel_savunma_ort = ev_genel_yedigi / ev_genel_mac
 dep_genel_hucum_ort = dep_genel_attigi / dep_genel_mac
 dep_genel_savunma_ort = dep_genel_yedigi / dep_genel_mac
 
-# 4. Dinamik Süreç Entegrasyonu (Sezon vs Form Ağırlığı)
 ev_dinamik_ic_hucum = (ev_ic_hucum_ort * sezon_agirligi) + (ev_son5_hucum_ort * form_agirligi)
 ev_dinamik_ic_savunma = (ev_ic_savunma_ort * sezon_agirligi) + (ev_son5_savunma_ort * form_agirligi)
 dep_dinamik_dis_hucum = (dep_dis_hucum_ort * sezon_agirligi) + (dep_son5_hucum_ort * form_agirligi)
 dep_dinamik_dis_savunma = (dep_dis_savunma_ort * sezon_agirligi) + (dep_son5_savunma_ort * form_agirligi)
 
-# 5. Clean Sheet Filtresi
 ev_dinamik_ic_savunma *= (1.0 - (ev_cs * 0.03))
 dep_dinamik_dis_savunma *= (1.0 - (dep_cs * 0.03))
 
-# 6. Lig Başı Oranlama Katsayıları (İç/Dış Odaklı)
 yarim_lig_ort = lig_ort_gol / 2
 ev_ic_hucum_katsayi = ev_dinamik_ic_hucum / max(yarim_lig_ort, 0.1)
 dep_dis_savunma_katsayi = dep_dinamik_dis_savunma / max(yarim_lig_ort, 0.1)
 dep_dis_hucum_katsayi = dep_dinamik_dis_hucum / max(yarim_lig_ort, 0.1)
 ev_ic_savunma_katsayi = ev_dinamik_ic_savunma / max(yarim_lig_ort, 0.1)
 
-# 7. Lig Başı Oranlama Katsayıları (Genel Lig Odaklı)
 ev_genel_hucum_katsayi = ev_genel_hucum_ort / max(yarim_lig_ort, 0.1)
 dep_genel_savunma_katsayi = dep_genel_savunma_ort / max(yarim_lig_ort, 0.1)
 dep_genel_hucum_katsayi = dep_genel_hucum_ort / max(yarim_lig_ort, 0.1)
 ev_genel_savunma_katsayi = ev_genel_savunma_ort / max(yarim_lig_ort, 0.1)
 
-# 8. Stabilize Edilmiş PPG (Puan) Dengesi
 ev_ppg = ev_ic_puan / ev_ic_mac
 dep_ppg = dep_dis_puan / dep_dis_mac
 puan_orani = ev_ppg / max((ev_ppg + dep_ppg), 0.1)
 puan_denge_carpan = 0.85 + (puan_orani * 0.30)
 
-# 9. Motivasyon ve Kadro Eksik Metrisleri
 onem_farki = ev_onem - dep_onem
 ev_onem_carpan = 1.0 + (onem_farki * 0.03)
 dep_onem_carpan = 1.0 - (onem_farki * 0.03)
 ev_kadro_cezasi = (ev_kritik_eksik * 0.22) + (ev_normal_eksik * 0.08)
 dep_kadro_cezasi = (dep_kritik_eksik * 0.22) + (dep_normal_eksik * 0.08)
 
-# 10. Çift Yönlü xG Modellemesi
-# Temel İç/Dış Projeksiyonu
 ev_ic_xg = (yarim_lig_ort * ev_ic_hucum_katsayi * dep_dis_savunma_katsayi)
 dep_dis_xg = (yarim_lig_ort * dep_dis_hucum_katsayi * ev_ic_savunma_katsayi)
 
-# Temel Genel Lig Projeksiyonu
 ev_genel_xg = (yarim_lig_ort * ev_genel_hucum_katsayi * dep_genel_savunma_katsayi)
 dep_genel_xg = (yarim_lig_ort * dep_genel_hucum_katsayi * ev_genel_savunma_katsayi)
 
-# 11. Hibrit xG Birleştirme (%50 İç-Dış Etkisi + %50 Genel Lig Karakteri) ve Çarpanlar
 ev_xg = ((ev_ic_xg * 0.5) + (ev_genel_xg * 0.5)) * puan_denge_carpan * ev_onem_carpan - ev_kadro_cezasi
 dep_xg = ((dep_dis_xg * 0.5) + (dep_genel_xg * 0.5)) * (2.0 - puan_denge_carpan) * dep_onem_carpan - dep_kadro_cezasi
 
 ev_xg = max(ev_xg, 0.05)
 dep_xg = max(dep_xg, 0.05)
 
-
-
-# Simülasyon Hesaplamaları (Genişletilmiş Havuz)
-
+# Simülasyon Hesaplamaları
 ms1_olasilik, x_olasilik, ms2_olasilik = mac_simule_et(ev_xg, dep_xg)
 
-
-
 # En Olası Matris Skor Projeksiyonu
-
 en_yuksek_skor_p, tahmin_ev_skor, tahmin_dep_skor = 0, 0, 0
-
 for i in range(6):
-
     for j in range(6):
-
         p = poisson_olasilik(i, ev_xg) * poisson_olasilik(j, dep_xg)
-
         if p > en_yuksek_skor_p:
-
             en_yuksek_skor_p, tahmin_ev_skor, tahmin_dep_skor = p, i, j
 
-
-
 # Gelişmiş Alt/Üst ve KG Var Dağılım Hesaplama
-
 ust_olasilik, kg_var_olasilik = 0.0, 0.0
-
 for i in range(11):
-
     for j in range(11):
-
         p = poisson_olasilik(i, ev_xg) * poisson_olasilik(j, dep_xg)
-
         if (i + j) > 2.5: ust_olasilik += p
-
         if i > 0 and j > 0: kg_var_olasilik += p
-
 ust_olasilik *= 100
-
 kg_var_olasilik *= 100
 
-
-
 # Hassas Değer (Value) Filtrelemesi
-
 v_ms1 = ms1_olasilik - (100 / b_ms1)
-
 v_x = x_olasilik - (100 / b_x)
-
 v_ms2 = ms2_olasilik - (100 / b_ms2)
-
-
-
-
 
 # --- 🎙️ VERİ TABANLI DETAYLI TEKNİK ANALİZ ÖZETİ ---
 yorum_cumleleri = []
@@ -364,7 +327,7 @@ else:
         "müsabakanın taktiksel derinliğinde kadro kaynaklı ekstra bir anomalilik öngörülmemektedir."
     )
 
-# 3. Gol ve Tempo Eğilim Analizi (Genişletilmiş Poisson Dağılımı)
+# 3. Gol ve Tempo Eğilim Analizi
 if ust_olasilik >= 58:
     yorum_cumleleri.append(
         f"Genişletilmiş Poisson havuzunda %{ust_olasilik:.1f} olasılıkla baskın bir 2.5 Üst trendi yakalanmıştır. "
@@ -388,7 +351,7 @@ else:
 if kg_var_olasilik >= 58:
     yorum_cumleleri.append(
         f"Karşılıklı Gol Var (KG Var) ihtimalinin %{kg_var_olasilik:.1f} seviyesinde seyretmesi, iki takımın da "
-        f"üçüncü bölgedeki bitiricilik kalitesini doğrular niteliktedir. Defansif zaafiyetler ve hücum iştahı, "
+        f"üçüncü bölgedeki bitiricilik kalitesini doğrular niteliktedir. Defansif zaafiyetler and hücum iştahı, "
         f"skor tabelasının çift taraflı değişme olasılığını maksimuma yaklaştırıyor."
     )
 elif kg_var_olasilik <= 42:
@@ -415,172 +378,93 @@ else:
 
 nihai_yorum = " ".join(yorum_cumleleri)
 
-
-
-
-
 # --- KULLANICI DOSTU ANA PANEL ---
-
 with sekme1:
-
     st.markdown('<div class="badge">SEZGİN GÖRMÜŞ VERİ ANALİZİ </div>', unsafe_allow_html=True)
-
     st.title("📊 Sezgin Görmüş Matematiksel Tahmin Robotu")
-
     st.write(f"Sistem stabilizasyonu tamamlandı. Profesyonel Ev xG: **{ev_xg:.2f}** | Profesyonel Deplasman xG: **{dep_xg:.2f}**")
-
     
-
     col_sol, col_sag = st.columns([11, 10])
-
     
-
     with col_sol:
-
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-
         st.subheader("🎯 Profesyonel Olasılık Dağılımı")
-
         fig = go.Figure(data=[go.Pie(labels=['Ev Sahibi Galibiyeti (MS1)', 'Beraberlik (X)', 'Deplasman Galibiyeti (MS2)'], values=[ms1_olasilik, x_olasilik, ms2_olasilik], hole=.45, marker_colors=['#0d9488', '#d97706', '#e11d48'])])
-
         fig.update_layout(template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', margin=dict(l=10, r=10, t=10, b=10), height=250)
-
         st.plotly_chart(fig, use_container_width=True)
-
         st.markdown('</div>', unsafe_allow_html=True)
-
         
-
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-
         st.subheader("⚽ Maç Öngörüsü")
-
         st.markdown(f'<div class="skor-box">🤖 EN YÜKSEK OLASILIKLI SKOR: {tahmin_ev_skor} - {tahmin_dep_skor}</div>', unsafe_allow_html=True)
-
         
-
         c1, c2 = st.columns(2)
-
         with c1: st.metric(label="📈 2.5 Üst İhtimali", value=f"%{ust_olasilik:.1f}"); st.progress(int(ust_olasilik))
-
         with c2: st.metric(label="🔥 Karşılıklı Gol Var İhtimali", value=f"%{kg_var_olasilik:.1f}"); st.progress(int(kg_var_olasilik))
-
         st.markdown('</div>', unsafe_allow_html=True)
-
-
 
     with col_sag:
-
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-
         st.subheader("🚨 Sinyal Odası (Value Oran Filtresi)")
-
         def sinyal_satiri(pazar, model_p, oran, value):
-
             renk = "signal-green" if value > 0 else "signal-red"
-
             durum = "DEĞERLİ ORAN 🔥" if value > 0 else "DEĞERSİZ ORAN ❌"
-
             st.markdown(f'<div style="padding: 12px 0; border-bottom: 1px solid #1e293b;"><div style="display:flex; justify-content:space-between;"><b>{pazar}</b><span class="{renk}">{durum}</span></div><div style="font-size:13px; color:#94a3b8; margin-top:4px;">Model İhtimali: %{model_p:.1f} | Bülten Oranı: {oran:.2f} | <b>Yapay Zekâ Değeri: <span class="{renk}">{value:+.2f}</span></b></div></div>', unsafe_allow_html=True)
-
         
-
         sinyal_satiri(f"{ev_sahibi} Galibiyeti (MS1)", ms1_olasilik, b_ms1, v_ms1)
-
         sinyal_satiri("Beraberlik (X)", x_olasilik, b_x, v_x)
-
         sinyal_satiri(f"{deplasman} Galibiyeti (MS2)", ms2_olasilik, b_ms2, v_ms2)
-
         st.markdown('</div>', unsafe_allow_html=True)
-
         
-
         st.markdown('<div class="premium-card" style="background: #0f172a;">', unsafe_allow_html=True)
-
         st.subheader("💡 Sezgin Görmüş Akıllı Strateji Raporu")
-
         
-
         en_iyi_bahis = "RİSKLİ MÜSABAKA (PAS) ⚠️"
-
         pazar_t = "Yok"
-
         
-
-        # Filtreleri daha profesyonel ve güvenli sınırlara çektik
-
         if v_ms1 > 0 and ms1_olasilik >= 48: en_iyi_bahis, pazar_t = f"Maç Sonucu 1 ({ev_sahibi})", "Maç Sonucu"
-
         elif v_ms2 > 0 and ms2_olasilik >= 48: en_iyi_bahis, pazar_t = f"Maç Sonucu 2 ({deplasman})", "Maç Sonucu"
-
         elif v_x > 0 and x_olasilik >= 32: en_iyi_bahis, pazar_t = "Beraberlik (X)", "Maç Sonucu"
-
         elif ust_olasilik >= 60: en_iyi_bahis, pazar_t = "2.5 Üst", "2.5 Alt/Üst"
-
         elif ust_olasilik <= 40: en_iyi_bahis, pazar_t = "2.5 Alt", "2.5 Alt/Üst"
-
         elif kg_var_olasilik >= 60: en_iyi_bahis, pazar_t = "Karşılıklı Gol Var (KG Var)", "Karşılıklı Gol"
-
         elif kg_var_olasilik <= 40: en_iyi_bahis, pazar_t = "Karşılıklı Gol Yok (KG Yok)", "Karşılıklı Gol"
-
         
-
         st.markdown(f'<div style="color:#f59e0b; font-weight:bold; font-size:17px; margin-bottom: 10px;">🎯 STRATEJİK SEÇİM: {en_iyi_bahis}</div>', unsafe_allow_html=True)
-
         
-
         st.markdown("##### 🎙️ Veri Mühendisliği Taktik Analizi")
-
         st.markdown(f'<div class="yorum-box">{nihai_yorum}</div>', unsafe_allow_html=True)
-
         st.write("")
-
         
-
         if st.button("💾 Kusursuz Analizi Arşive Kaydet"):
-
             df_logs = pd.read_csv(DB_FILE)
-
             yeni = {
-
                 "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M"), "Ev Sahibi": ev_sahibi, "Deplasman": deplasman, 
-
                 "Model_MS1": round(ms1_olasilik,1), "Model_X": round(x_olasilik,1), "Model_MS2": round(ms2_olasilik,1), 
-
                 "Model_Ust": round(ust_olasilik,1), "Model_KGVar": round(kg_var_olasilik,1),
-
                 "Onerilen_Bahis": en_iyi_bahis, "Pazar_Tipi": pazar_t, "Sonuc": "Bekliyor"
-
             }
-
             df_logs = pd.concat([df_logs, pd.DataFrame([yeni])], ignore_index=True)
-
             df_logs.to_csv(DB_FILE, index=False)
-
             st.success("Kusursuz veri analizi arşive mühürlendi kanka!")
-
         st.markdown('</div>', unsafe_allow_html=True)
-
-
 
 # --- SEKME 2: ARŞİV PANELİ ---
 with sekme2:
     st.markdown('<div class="badge">SEZGİN GÖRMÜŞ ANALİZ MERKEZİ v7.0</div>', unsafe_allow_html=True)
     st.title("🗂️ Profesyonel Analiz Arşivi & Performans Takip Laboratuvarı")
-    st.write("Veritabanına mühürlenmiş geçmiş tahminlerinizi yönetin, sistem verimliliğini ve başarı indeksini analiz edin.")
+    st.write("Veritabanına mühürlenmiş geçmiş tahminlerinizi yönetin, sistem verimliliğini và başarı indeksini analiz edin.")
     
     df_logs = pd.read_csv(DB_FILE)
     
     if len(df_logs) == 0:
         st.info("Arşiv veritabanı henüz boş kanka. İlk analizini kaydedince burası şenlenecek!")
     else:
-        # --- 1. MİLYON DOLARLIK KPI METRİKLERİ (PREMIUM CARDS) ---
         toplam_mac = len(df_logs)
         kazananlar = len(df_logs[df_logs["Sonuc"] == "KAZANDI ✅"])
         kaybedenler = len(df_logs[df_logs["Sonuc"] == "KAYBETTİ ❌"])
         bekleyenler = len(df_logs[df_logs["Sonuc"] == "Bekliyor"])
         
-        # Başarı Oranı Hesaplama (Bekleyenler hariç gerçek performans)
         sonuclanmis = kazananlar + kaybedenler
         basari_orani = (kazananlar / sonuclanmis * 100) if sonuclanmis > 0 else 0.0
         
@@ -588,15 +472,13 @@ with sekme2:
         with m_col1:
             st.metric(label="📊 Toplam Analiz Edilen Müsabaka", value=toplam_mac)
         with m_col2:
-            st.metric(label="🔥 Model Başarı Endeksi", value=f"%{basari_orani:.1f}", delta=f"+%{basari_orani:.1f}" if basari_orani > 50 else f"-%{100-basari_orani:.1f}")
+            st.metric(label="🔥 Model Başarı Endeksi", value=f"%{basari_orani:.1f}")
         with m_col3:
             st.metric(label="⏳ Sonuç Bekleyen Tahminler", value=bekleyenler)
         with m_col4:
-            st.metric(label="🎯 İsabetli Kupon / Yatan", value=f"{kazananlar} / {kaybedenler}")
+            st.metric(label="🎯 İsabetli / Yatan Müsabaka", value=f"{kazananlar} / {kaybedenler}")
             
         st.write("---")
-        
-        # --- 2. Gelişmiş Filtreleme ve Arama Barı ---
         st.markdown("### 🔍 Akıllı Filtreleme ve Arama")
         f_c1, f_c2 = st.columns([2, 1])
         with f_c1:
@@ -604,214 +486,16 @@ with sekme2:
         with f_c2:
             durum_filtresi = st.selectbox("Duruma Göre Süz", ["Hepsi", "KAZANDI ✅", "KAYBETTİ ❌", "Bekliyor"])
             
-        # Filtreleri Uygula
         df_goster = df_logs.copy()
         if arama_terimi:
             df_goster = df_goster[df_goster["Ev Sahibi"].str.lower().str.contains(arama_terimi) | df_goster["Deplasman"].str.lower().str.contains(arama_terimi)]
         if durum_filtresi != "Hepsi":
             df_goster = df_goster[df_goster["Sonuc"] == durum_filtresi]
+            
+        st.dataframe(df_goster, use_container_width=True)
 
-        # --- 3. MAÇ DURUMU GÜNCELLEME VE GELİŞMİŞ SİLME PANELİ ---
-        st.markdown("### 🛠️ Veritabanı Yönetim ve Operasyon Odası")
-        
-        # İşlemler için yan yana iki sütün: Biri Güncelleme, Biri Silme
-        tablo_c1, tablo_c2 = st.columns([1, 1])
-        
-        with tablo_c1:
-            st.markdown("<div style='background: #0f172a; padding:15px; border-radius:10px; border:1px solid #1e293b;'>", unsafe_allow_html=True)
-            st.markdown("##### ✏️ Maç Sonucu Güncelle")
-            secilen_index = st.selectbox(
-                "İşlem Yapılacak Maçı Seç", 
-                df_goster.index, 
-                format_func=lambda x: f"[{x}] {df_goster.loc[x, 'Ev Sahibi']} - {df_goster.loc[x, 'Deplasman']} ({df_goster.loc[x, 'Onerilen_Bahis']})"
-            )
-            
-            pazar_tipi = df_logs.loc[secilen_index, "Pazar_Tipi"]
-            if pazar_tipi == "Maç Sonucu":
-                secenekler = ["Bekliyor", "MS1 Bitti ✅", "X Bitti ✅", "MS2 Bitti ✅", "KAYBETTİ ❌"]
-            elif pazar_tipi == "2.5 Alt/Üst":
-                secenekler = ["Bekliyor", "2.5 Üst Bitti ✅", "2.5 Alt Bitti ✅", "KAYBETTİ ❌"]
-            elif pazar_tipi == "Karşılıklı Gol":
-                secenekler = ["Bekliyor", "KG Var Bitti ✅", "KG Yok Bitti ✅", "KAYBETTİ ❌"]
-            else:
-                secenekler = ["Bekliyor", "KAZANDI ✅", "KAYBETTİ ❌"]
-                
-            sonuc = st.selectbox("Gerçek Maç Sonucu Nedir?", secenekler, key="guncelle_select")
-            
-            if st.button("🔄 Sonucu İşle ve İstatistikleri Yenile", use_container_width=True):
-                onerilen = df_logs.loc[secilen_index, "Onerilen_Bahis"]
-                
-                # Kesin Kontrol Mekanizması (Hatalı yeşil tikleri önleyen kusursuz mantık)
-                if "MS1" in onerilen and sonuc == "MS1 Bitti ✅": final_durum = "KAZANDI ✅"
-                elif "MS2" in onerilen and sonuc == "MS2 Bitti ✅": final_durum = "KAZANDI ✅"
-                elif "Beraberlik" in onerilen and sonuc == "X Bitti ✅": final_durum = "KAZANDI ✅"
-                elif "2.5 Üst" in onerilen and sonuc == "2.5 Üst Bitti ✅": final_durum = "KAZANDI ✅"
-                elif "2.5 Alt" in onerilen and sonuc == "2.5 Alt Bitti ✅": final_durum = "KAZANDI ✅"
-                elif "KG Var" in onerilen and sonuc == "KG Var Bitti ✅": final_durum = "KAZANDI ✅"
-                elif "KG Yok" in onerilen and sonuc == "KG Yok Bitti ✅": final_durum = "KAZANDI ✅"
-                elif sonuc == "Bekliyor": final_durum = "Bekliyor"
-                else: final_durum = "KAYBETTİ ❌"  # Şartlar uyuşmuyorsa kupon net yatmıştır.
-                
-                df_logs.loc[secilen_index, "Sonuc"] = final_durum
-                df_logs.to_csv(DB_FILE, index=False)
-                st.success(f"[{secilen_index}] ID'li müsabaka başarıyla '{final_durum}' olarak güncellendi!")
-                st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
-            
-        with tablo_c2:
-            st.markdown("<div style='background: #180f14; padding:15px; border-radius:10px; border:1px solid #3f1616;'>", unsafe_allow_html=True)
-            st.markdown("<h5 style='color:#ef4444;'>🗑️ Veritabanından Analiz Sil</h5>", unsafe_allow_html=True)
-            silinecek_index = st.selectbox(
-                "Arşivden Tamamen Silinecek Maçı Seç", 
-                df_goster.index, 
-                format_func=lambda x: f"[{x}] {df_goster.loc[x, 'Ev Sahibi']} - {df_goster.loc[x, 'Deplasman']}"
-            )
-            
-            st.write("")
-            st.write(f"⚠️ **DİKKAT:** **[{silinecek_index}]** ID'li maç veritabanından kalıcı olarak silinecektir. Bu işlem geri alınamaz.")
-            st.write("")
-            
-            if st.button("💥 Seçilen Analizi Kalıcı Olarak Sil", use_container_width=True):
-                df_logs = df_logs.drop(silinecek_index).reset_index(drop=True)
-                df_logs.to_csv(DB_FILE, index=False)
-                st.error("Analiz kaydı arşivden söküldü ve imha edildi!")
-                st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
-            
-        st.write("---")
-        
-        # --- 4. RENKLENDİRİLMİŞ PREMIUM DATA FRAME GÖRÜNÜMÜ ---
-        st.markdown("### 📋 Güncel Analiz Log Dosyası Matrisi")
-        
-        # Renklendirme fonksiyonu (Milyon dolarlık finans şirketleri tasarımı)
-        def satır_renklendir(val):
-            if val == "KAZANDI ✅":
-                return "background-color: #064e3b; color: #10b981; font-weight: bold;"
-            elif val == "KAYBETTİ ❌":
-                return "background-color: #7f1d1d; color: #f87171; font-weight: bold;"
-            elif val == "Bekliyor":
-                return "background-color: #78350f; color: #fbbf24; font-weight: bold;"
-            return ""
-            
-        # Sadece Görsel Tabloyu Şıklaştırmak İçin Stil Uygulama
-        styled_df = df_goster.style.map(satır_renklendir, subset=["Sonuc"])
-        
-        st.dataframe(styled_df, use_container_width=True, height=350)
-
-        st.dataframe(df_logs, use_container_width=True) 
-
-
-# --- SEKME 3: AKILLI KUPON KOMBİNASYON ODASI ---
+# --- SEKME 3: KUPON ODASI ---
 with sekme3:
-    st.markdown('<div class="badge">FINANSAL PORTFÖY YÖNETİMİ v1.0</div>', unsafe_allow_html=True)
-    st.title("🎟️ Akıllı Kupon Kombinasyon Odası")
-    st.write("Arşivdeki 'Bekliyor' durumundaki maçları kombine edin, kasanızı profesyonelce yönetin.")
-    
-    df_logs = pd.read_csv(DB_FILE)
-    df_kuponlar = pd.read_csv(KUPON_DB_FILE)
-    
-    # --- 🔄 OTOMATİK KUPON SONUÇLANDIRICI (KUPON MOTORU) ---
-    if len(df_kuponlar) > 0 and len(df_logs) > 0:
-        kupon_guncellendi_mi = False
-        for idx, kupon in df_kuponlar.iterrows():
-            if kupon["Durum"] == "Bekliyor":
-                # Kupondaki maç ID'lerini listeye çevir
-                mac_idleri = [int(x) for x in str(kupon["Mac_IDleri"]).split(",")]
-                
-                mac_durumlari = []
-                for m_id in list(mac_idleri):
-                    if m_id in df_logs.index:
-                        mac_durumlari.append(df_logs.loc[m_id, "Sonuc"])
-                
-                # Otomatik Değerlendirme Mantığı
-                if "KAYBETTİ ❌" in mac_durumlari:
-                    df_kuponlar.loc[idx, "Durum"] = "KAYBETTİ ❌"
-                    kupon_guncellendi_mi = True
-                elif len(mac_durumlari) == len(mac_idleri) and all(durum == "KAZANDI ✅" for durum in mac_durumlari):
-                    df_kuponlar.loc[idx, "Durum"] = "KAZANDI ✅"
-                    kupon_guncellendi_mi = True
-                    
-        if kupon_guncellendi_mi:
-            df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
-            df_kuponlar = pd.read_csv(KUPON_DB_FILE) # Güncel halini tekrar çek
-            
-    # --- 📊 KUPON BAŞARI METRİKLERİ ---
-    if len(df_kuponlar) > 0:
-        k_toplam = len(df_kuponlar)
-        k_kazanan = len(df_kuponlar[df_kuponlar["Durum"] == "KAZANDI ✅"])
-        k_kaybeden = len(df_kuponlar[df_kuponlar["Durum"] == "KAYBETTİ ❌"])
-        k_bekleyen = len(df_kuponlar[df_kuponlar["Durum"] == "Bekliyor"])
-        
-        k_sonuclanmis = k_kazanan + k_kaybeden
-        k_basari = (k_kazanan / k_sonuclanmis * 100) if k_sonuclanmis > 0 else 0.0
-        
-        kc1, kc2, kc3 = st.columns(3)
-        with kc1:
-            st.metric(label="🎟️ Toplam Yapılan Kupon", value=k_toplam)
-        with kc2:
-            st.metric(label="🎯 Kupon Başarı Yüzdesi", value=f"%{k_basari:.1f}")
-        with kc3:
-            st.metric(label="💰 Toplam Yatırılan (Bekleyen)", value=f"{df_kuponlar[df_kuponlar['Durum']=='Bekliyor']['Yatirilan_Tutar'].sum()} TL")
-    st.write("---")
-
-    # --- ➕ YENİ KUPON OLUŞTURMA ALANI ---
-    st.markdown("### 🛠️ Yeni Kupon Kombinasyonu Oluştur")
-    
-    # Sadece durumu "Bekliyor" olan maçları süzüyoruz
-    bekleyen_maclar = df_logs[df_logs["Sonuc"] == "Bekliyor"]
-    
-    if len(bekleyen_maclar) == 0:
-        st.warning("Kupon yapabilmek için arşivde durumu 'Bekliyor' olan en az 1 maç olmalı kanka. Önce analiz yapıp kaydet!")
-    else:
-        # Multiselect ile çoklu maç seçimi
-        secilen_mac_gosterim = st.multiselect(
-            "Kupona Eklenecek Maçları Seç kanka:",
-            options=bekleyen_maclar.index,
-            format_func=lambda x: f"ID [{x}] {bekleyen_maclar.loc[x, 'Ev Sahibi']} - {bekleyen_maclar.loc[x, 'Deplasman']} ({bekleyen_maclar.loc[x, 'Onerilen_Bahis']})"
-        )
-        
-        # 1000 TL Limitli Tutar Girişi
-        yatirilacak_para = st.number_input("Kupon Tutarı (TL):", min_value=10, max_value=1000, value=100, step=10, help="Maksimum 1000 TL yatırabilirsin kanka.")
-        
-        if st.button("🚀 Kuponu Kilitle ve Gönder", use_container_width=True):
-            if len(secilen_mac_gosterim) == 0:
-                st.error("En az 1 maç seçmeden kuponu kilitleyemezsin!")
-            else:
-                # Seçilen maçların özet metnini oluştur
-                detay_listesi = []
-                for m_id in secilen_mac_gosterim:
-                    ev = bekleyen_maclar.loc[m_id, 'Ev Sahibi']
-                    dep = bekleyen_maclar.loc[m_id, 'Deplasman']
-                    tahmin = bekleyen_maclar.loc[m_id, 'Onerilen_Bahis']
-                    detay_listesi.append(f"{ev}-{dep} ({tahmin})")
-                
-                mac_detaylari_str = " | ".join(detay_listesi)
-                mac_idleri_str = ",".join([str(x) for x in secilen_mac_gosterim])
-                new_id = len(df_kuponlar) + 1
-                
-                # Yeni kupon satırını ekle
-                yeni_kupon = pd.DataFrame([{
-                    "Kupon_ID": new_id,
-                    "Mac_IDleri": mac_idleri_str,
-                    "Mac_Detaylari": mac_detaylari_str,
-                    "Yatirilan_Tutar": yatirilacak_para,
-                    "Durum": "Bekliyor"
-                }])
-                
-                df_kuponlar = pd.concat([df_kuponlar, yeni_kupon], ignore_index=True)
-                df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
-                st.success(f"🎟️ {new_id} numaralı kupon başarıyla kilitlendi! Sistem takibe aldı.")
-                st.rerun()
-
-    # --- 📋 KUPON ARŞİVİ TABLOSU ---
-    st.write("---")
-    st.markdown("### 📜 Güncel Kupon Portföyü")
-    if len(df_kuponlar) > 0:
-        def kupon_renklendir(val):
-            if val == "KAZANDI ✅": return "background-color: #064e3b; color: #10b981; font-weight: bold;"
-            elif val == "KAYBETTİ ❌": return "background-color: #7f1d1d; color: #f87171; font-weight: bold;"
-            elif val == "Bekliyor": return "background-color: #78350f; color: #fbbf24; font-weight: bold;"
-            return ""
-        
-        styled_kupon = df_kuponlar.style.map(kupon_renklendir, subset=["Durum"])
-        st.dataframe(styled_kupon, use_container_width=True)
+    st.markdown('<div class="badge">🎟️ KUPON MERKEZİ</div>', unsafe_allow_html=True)
+    st.title("🎟️ Kupon Odası")
+    st.info("Kupon yönetim alanı aktif kanka.")
