@@ -5,6 +5,8 @@ import os
 import math
 from datetime import datetime
 import numpy as np
+import tkinter as tk
+from tkinter import ttk
 
 # --- SEZGİN GÖRMÜŞ AI PRO v7.0 SAYFA AYARLARI ---
 st.set_page_config(page_title="Sezgin Görmüş Veri Analizi v7.0", page_icon="🔮", layout="wide")
