@@ -182,6 +182,7 @@ kg_var_olasilik *= 100
 v_ms1 = ms1_olasilik - (100 / b_ms1)
 v_x = x_olasilik - (100 / b_x)
 v_ms2 = ms2_olasilik - (100 / b_ms2)
+v_ust = ust_olasilik - (100 / b_ust)
 
 
 # --- 🎙️ VERİ TABANLI DETAYLI TEKNİK ANALİZ ÖZETİ ---
