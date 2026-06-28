@@ -167,7 +167,7 @@ dep_dinamik_hucum = (dep_genel_hucum * sezon_agirligi) + (dep_son5_hucum * form_
 
 dep_dinamik_savunma = (dep_genel_savunma * sezon_agirligi) + (dep_son5_savunma * form_agirligi)
 
-
+HOME_ADVANTAGE = 0.28
 # 4. Profesyonel Lig Başı Oranlama ve Ters Metrik Optimizasyonu
 
 yarim_lig_ort = lig_ort_gol / 2
