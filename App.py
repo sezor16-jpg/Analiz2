@@ -47,7 +47,6 @@ st.markdown("""
     .signal-red { color: #ef4444; font-weight: bold; }
     .badge { background: linear-gradient(90deg, #4c1d95 0%, #2563eb 100%); color: #ffffff; padding: 6px 16px; border-radius: 9999px; font-size: 13px; font-weight: bold; display: inline-block; margin-bottom: 12px; border: 1px solid #3b82f6; }
     .yorum-box { background-color: #0b1329; border-left: 4px solid #8b5cf6; padding: 18px; border-radius: 8px; font-size: 15px; color: #e2e8f0; line-height: 1.6; margin-top: 15px; }
-    .kasa-card { background: #0d1527; border: 1px solid #10b981; padding: 15px; border-radius: 10px; text-align: center; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -100,7 +99,7 @@ b_ms2 = st.sidebar.number_input("Bülten Oranı: MS 2", min_value=1.01, value=2.
 b_ust = st.sidebar.number_input("Bülten Oranı: 2.5 Üst", min_value=1.01, value=1.75)
 
 
-# --- ⚙️ SEZGİN GÖRMÜŞ MATHEMATICAL MATRIX MOTORU (YILDIZLAR TEMİZLENDİ) ---
+# --- ⚙️ SEZGİN GÖRMÜŞ MATEMATİKSEL PROJEKSİYON MOTORU ---
 ev_genel_hucum = ev_toplam_gol / ev_ic_mac
 ev_genel_savunma = ev_toplam_yenen / ev_ic_mac
 dep_genel_hucum = dep_toplam_gol / dep_dis_mac
@@ -111,8 +110,8 @@ ev_son5_savunma = ev_son5_yedigi / 5
 dep_son5_hucum = dep_son5_attigi / 5
 dep_son5_savunma = dep_son5_yedigi / 5
 
-# Hatalı olan ** işaretleri kod alanından tamamen kaldırıldı
-ev_dinamik_hucum = (ev_genel_hucum * ocean_agirligi if 'ocean_agirligi' in locals() else ev_genel_hucum * sezon_agirligi) + (ev_son5_hucum * form_agirligi)
+# Formüller matematiksel olarak kusursuzlaştırıldı
+ev_dinamik_hucum = (ev_genel_hucum * sezon_agirligi) + (ev_son5_hucum * form_agirligi)
 ev_dinamik_savunma = (ev_genel_savunma * sezon_agirligi) + (ev_son5_savunma * form_agirligi)
 dep_dinamik_hucum = (dep_genel_hucum * sezon_agirligi) + (dep_son5_hucum * form_agirligi)
 dep_dinamik_savunma = (dep_genel_savunma * sezon_agirligi) + (dep_son5_savunma * form_agirligi)
@@ -173,6 +172,22 @@ elif xg_farki >= 0.70: guven_metni, guven_renk = "YÜKSEK GÜVEN 📈", "#34d399
 elif xg_farki >= 0.35: guven_metni, guven_renk = "ORTA GÜVEN ⚖️", "#f59e0b"
 else: guven_metni, guven_renk = "DÜŞÜK GÜVEN (RİSKLİ) ⚠️", "#ef4444"
 
+# --- 🎙️ GELİŞMİŞ VERİ TABANLI TEKNİK YORUM ALGORİTMASI ---
+yorum_cumleleri = []
+yorum_cumleleri.append(f"Lig ortalaması olan {lig_ort_gol:.2f} gol baz alınarak yapılan ters xG modellemesinde; {ev_sahibi} için net üretkenlik xG'si {ev_xg:.2f}, {deplasman} için ise {dep_xg:.2f} olarak saptanmıştır.")
+
+if (ev_kritik_eksik + ev_normal_eksik) > (dep_kritik_eksik + dep_normal_eksik):
+    yorum_cumleleri.append("Ev sahibindeki eksik oyuncu yükü taktiksel esnekliği daraltıyor, bu durum model çıktısına xG kırılması olarak yansıtıldı.")
+elif (dep_kritik_eksik + dep_normal_eksik) > (ev_kritik_eksik + ev_normal_eksik):
+    yorum_cumleleri.append("Deplasman ekibinin kadro derinliğindeki eksikler, deplasman direncini matematiksel olarak aşağı çekiyor.")
+
+if ust_olasilik >= 58:
+    yorum_cumleleri.append(f"Genişletilmiş Poisson havuzunda %{ust_olasilik:.1f}'lik baskın bir 2.5 Üst trendi yakalandı, iki takımın hücum katsayıları lig ortalamasının üzerinde.")
+elif ust_olasilik <= 42:
+    yorum_cumleleri.append(f"Düşük tempolu kilit oyun eğilimi yüksek. %{100-ust_olasilik:.1f} ihtimalle savunma katsayılarının ağır basacağı bir 90 dakika öngörülüyor.")
+
+nihai_yorum = " ".join(yorum_cumleleri)
+
 # --- STRATEJİK SEÇİM BELİRLEME ---
 en_iyi_bahis = "PAS (RİSKLİ MÜSABAKA)"
 pazar_t = "Yok"
@@ -182,7 +197,7 @@ if v_ms1 > 0 and ms1_olasilik >= 45: en_iyi_bahis, pazar_t, secilen_oran = f"MS 
 elif v_ms2 > 0 and ms2_olasilik >= 45: en_iyi_bahis, pazar_t, secilen_oran = f"MS 2 ({deplasman})", "Maç Sonucu", b_ms2
 elif v_ust > 0 and ust_olasilik >= 58: en_iyi_bahis, pazar_t, secilen_oran = "2.5 Üst", "2.5 Alt/Üst", b_ust
 elif v_x > 0 and x_olasilik >= 32: en_iyi_bahis, pazar_t, secilen_oran = "Beraberlik (X)", "Maç Sonucu", b_x
-elif kg_var_olasilik >= 60: en_iyi_bahis, pazar_t, secilen_oran = "KG Var", "Karşılıklı Gol", 1.60
+elif kg_var_olasilik >= 60: en_iyi_bahis, pazar_t, secilen_oran = "KG Var", "Karşılıklı Gol", 1.65
 
 # --- ANA PANEL ARABİRİMİ ---
 with sekme1:
@@ -202,7 +217,7 @@ with sekme1:
         
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
         st.subheader("⚽ Skor & Gol Projeksiyon Odası")
-        st.markdown(f'<div class="skor-box">🤖 YAPAY ZEKÂ SKOR TAHMİNİ: {tahmin_ev_skor} - {tahmin_dep_skor}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="skor-box">🤖 TAHMİNİ SKOR MATRİSİ: {tahmin_ev_skor} - {tahmin_dep_skor}</div>', unsafe_allow_html=True)
         c1, c2 = st.columns(2)
         with c1: st.metric(label="📈 2.5 Üst Olasılığı", value=f"%{ust_olasilik:.1f}")
         with c2: st.metric(label="🔥 KG Var Olasılığı", value=f"%{kg_var_olasilik:.1f}")
@@ -228,6 +243,10 @@ with sekme1:
         st.markdown(f'<div style="margin-top:5px; font-size:16px;">🛡️ SİSTEM GÜVEN SKORU: <span style="color:{guven_renk}; font-weight:bold;">{guven_metni}</span></div>', unsafe_allow_html=True)
         
         st.write("")
+        st.markdown("##### 🎙️ Veri Mühendisliği Taktik Analizi")
+        st.markdown(f'<div class="yorum-box">{nihai_yorum}</div>', unsafe_allow_html=True)
+        st.write("")
+        
         if st.button("💾 Analizi Arşive Gönder"):
             df_logs = pd.read_csv(DB_FILE)
             yeni = {
@@ -274,7 +293,7 @@ with sekme2:
         with cf4: st.metric("📊 Finansal ROI (Yatırım Getirisi)", f"%{roi:+.1f}")
         
         st.write("---")
-        st.markdown("### 🛠️ Maç Sonuçlandırma İstasyonu")
+        st.markdown("### 🛠️ Maç Sonucu Düzenleme İstasyonu")
         c_m, c_s = st.columns(2)
         with c_m:
             secilen = st.selectbox("Sonuçlandırılacak Maçı Seç", df_logs.index, format_func=lambda x: f"{df_logs.loc[x, 'Ev Sahibi']} - {df_logs.loc[x, 'Deplasman']} -> [{df_logs.loc[x, 'Onerilen_Bahis']}]")
@@ -285,7 +304,11 @@ with sekme2:
             df_logs.loc[secilen, "Sonuc"] = sonuc
             df_logs.to_csv(DB_FILE, index=False)
             st.success("Veritabanı güncellendi!")
-            st.rerun()
+            # Streamlit Versiyon Bağımsız Güvenli Yeniden Başlatma Kontrolü
+            if hasattr(st, "rerun"):
+                st.rerun()
+            else:
+                st.experimental_rerun()
             
         st.write("---")
         st.dataframe(df_logs, use_container_width=True)
