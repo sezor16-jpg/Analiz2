@@ -100,7 +100,7 @@ b_ms2 = st.sidebar.number_input("Bülten Oranı: MS 2", min_value=1.01, value=2.
 b_ust = st.sidebar.number_input("Bülten Oranı: 2.5 Üst", min_value=1.01, value=1.75)
 
 
-# --- ⚙️ SEZGİN GÖRMÜŞ MATHEMATICAL MATRIX MOTORU ---
+# --- ⚙️ SEZGİN GÖRMÜŞ MATHEMATICAL MATRIX MOTORU (YILDIZLAR TEMİZLENDİ) ---
 ev_genel_hucum = ev_toplam_gol / ev_ic_mac
 ev_genel_savunma = ev_toplam_yenen / ev_ic_mac
 dep_genel_hucum = dep_toplam_gol / dep_dis_mac
@@ -111,10 +111,11 @@ ev_son5_savunma = ev_son5_yedigi / 5
 dep_son5_hucum = dep_son5_attigi / 5
 dep_son5_savunma = dep_son5_yedigi / 5
 
-ev_dinamik_hucum = (ev_genel_hucum * **sezon_agirligi**) + (ev_son5_hucum * **form_agirligi**)
-ev_dinamik_savunma = (ev_genel_savunma * **sezon_agirligi**) + (ev_son5_savunma * **form_agirligi**)
-dep_dinamik_hucum = (dep_genel_hucum * **sezon_agirligi**) + (dep_son5_hucum * **form_agirligi**)
-dep_dinamik_savunma = (dep_genel_savunma * **sezon_agirligi**) + (dep_son5_savunma * **form_agirligi**)
+# Hatalı olan ** işaretleri kod alanından tamamen kaldırıldı
+ev_dinamik_hucum = (ev_genel_hucum * ocean_agirligi if 'ocean_agirligi' in locals() else ev_genel_hucum * sezon_agirligi) + (ev_son5_hucum * form_agirligi)
+ev_dinamik_savunma = (ev_genel_savunma * sezon_agirligi) + (ev_son5_savunma * form_agirligi)
+dep_dinamik_hucum = (dep_genel_hucum * sezon_agirligi) + (dep_son5_hucum * form_agirligi)
+dep_dinamik_savunma = (dep_genel_savunma * sezon_agirligi) + (dep_son5_savunma * form_agirligi)
 
 ev_dinamik_savunma *= (1.0 - (ev_cs * 0.03))
 dep_dinamik_savunma *= (1.0 - (dep_cs * 0.03))
@@ -246,14 +247,12 @@ with sekme2:
     df_logs = pd.read_csv(DB_FILE)
     
     if len(df_logs) > 0:
-        # Finansal Backtest Hesaplamaları
         toplam_kupon = len(df_logs[df_logs["Sonuc"] != "Bekliyor"])
         kazananlar = len(df_logs[df_logs["Sonuc"] == "KAZANDI ✅"])
         kaybedenler = len(df_logs[df_logs["Sonuc"] == "KAYBETTİ ❌"])
         
         basari_orani = (kazananlar / toplam_kupon * 100) if toplam_kupon > 0 else 0.0
         
-        # Her maça sabit 100 Birim (TL) basıldığını varsayan finansal model
         sabit_bet = 100
         toplam_yatirilan = toplam_kupon * sabit_bet
         toplam_kasa = 0.0
@@ -266,7 +265,6 @@ with sekme2:
                 
         roi = (toplam_kasa / toplam_yatirilan * 100) if toplam_yatirilan > 0 else 0.0
         
-        # Finansal İndikatör Kartları
         cf1, cf2, cf3, cf4 = st.columns(4)
         with cf1: st.metric("📋 Değerlendirilen Maç", f"{toplam_kupon} Maç")
         with cf2: st.metric("🎯 Model Başarı Yüzdesi", f"%{basari_orani:.1f}")
