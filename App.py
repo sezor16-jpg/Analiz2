@@ -500,93 +500,138 @@ with sekme1:
 
 
 # --- SEKME 2: ARŞİV PANELİ ---
-
 with sekme2:
-
-    st.title("🗂️ Sezgin Görmüş Analiz Günlüğü Veritabanı")
-
-    df_logs = pd.read_csv(DB_FILE)
-
+    st.markdown('<div class="badge">SEZGİN GÖRMÜŞ ANALİZ MERKEZİ v7.0</div>', unsafe_allow_html=True)
+    st.title("🗂️ Profesyonel Analiz Arşivi & Performans Takip Laboratuvarı")
+    st.write("Veritabanına mühürlenmiş geçmiş tahminlerinizi yönetin, sistem verimliliğini ve başarı indeksini analiz edin.")
     
-
+    df_logs = pd.read_csv(DB_FILE)
+    
     if len(df_logs) == 0:
-
-        st.info("Arşiv veritabanı henüz boş kanka.")
-
+        st.info("Arşiv veritabanı henüz boş kanka. İlk analizini kaydedince burası şenlenecek!")
     else:
-
-        st.markdown("### 🛠️ Maç Durumu Güncelleme Paneli")
-
-        c_m, c_s = st.columns(2)
-
-        with c_m:
-
-            secilen = st.selectbox("Sonuçlandırılacak Maçı Seç", df_logs.index, format_func=lambda x: f"{df_logs.loc[x, 'Ev Sahibi']} - {df_logs.loc[x, 'Deplasman']} ({df_logs.loc[x, 'Onerilen_Bahis']})")
-
-        with c_s:
-
-            pazar_tipi = df_logs.loc[secilen, "Pazar_Tipi"]
-
-            if pazar_tipi == "Maç Sonucu":
-
-                secenekler = ["Bekliyor", "MS1 Bitti ✅", "X Bitti ✅", "MS2 Bitti ✅", "KAYBETTİ ❌"]
-
-            elif pazar_tipi == "2.5 Alt/Üst":
-
-                secenekler = ["Bekliyor", "2.5 Üst Bitti ✅", "2.5 Alt Bitti ✅", "KAYBETTİ ❌"]
-
-            elif pazar_tipi == "Karşılıklı Gol":
-
-                secenekler = ["Bekliyor", "KG Var Bitti ✅", "KG Yok Bitti ✅", "KAYBETTİ ❌"]
-
-            else:
-
-                secenekler = ["Bekliyor", "KAZANDI ✅", "KAYBETTİ ❌"]
-
-                
-
-            sonuc = st.selectbox("Gerçek Maç Sonucu Nedir?", secenekler)
-
+        # --- 1. MİLYON DOLARLIK KPI METRİKLERİ (PREMIUM CARDS) ---
+        toplam_mac = len(df_logs)
+        kazananlar = len(df_logs[df_logs["Sonuc"] == "KAZANDI ✅"])
+        kaybedenler = len(df_logs[df_logs["Sonuc"] == "KAYBETTİ ❌"])
+        bekleyenler = len(df_logs[df_logs["Sonuc"] == "Bekliyor"])
+        
+        # Başarı Oranı Hesaplama (Bekleyenler hariç gerçek performans)
+        sonuclanmis = kazananlar + kaybedenler
+        basari_orani = (kazananlar / sonuclanmis * 100) if sonuclanmis > 0 else 0.0
+        
+        m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+        with m_col1:
+            st.metric(label="📊 Toplam Analiz Edilen Müsabaka", value=toplam_mac)
+        with m_col2:
+            st.metric(label="🔥 Model Başarı Endeksi", value=f"%{basari_orani:.1f}", delta=f"+%{basari_orani:.1f}" if basari_orani > 50 else f"-%{100-basari_orani:.1f}")
+        with m_col3:
+            st.metric(label="⏳ Sonuç Bekleyen Tahminler", value=bekleyenler)
+        with m_col4:
+            st.metric(label="🎯 İsabetli Kupon / Yatan", value=f"{kazananlar} / {kaybedenler}")
             
-
-        if st.button("Sonucu Kaydet ve Veritabanını Güncelle"):
-
-            onerilen = df_logs.loc[secilen, "Onerilen_Bahis"]
-
-            if "MS1" in onerilen and sonuc == "MS1 Bitti ✅": final_durum = "KAZANDI ✅"
-
-            elif "MS2" in onerilen and sonuc == "MS2 Bitti ✅": final_durum = "KAZANDI ✅"
-
-            elif "Beraberlik" in onerilen and sonuc == "X Bitti ✅": final_durum = "KAZANDI ✅"
-
-            elif "2.5 Üst" in onerilen and sonuc == "2.5 Üst Bitti ✅": final_durum = "KAZANDI ✅"
-
-            elif "2.5 Alt" in onerilen and sonuc == "2.5 Alt Bitti ✅": final_durum = "KAZANDI ✅"
-
-            elif "KG Var" in onerilen and sonuc == "KG Var Bitti ✅": final_durum = "KAZANDI ✅"
-
-            elif "KG Yok" in onerilen and sonuc == "KG Yok Bitti ✅": final_durum = "KAZANDI ✅"
-
-            elif sonuc == "Bekliyor": final_durum = "Bekliyor"
-
-            elif sonuc == "KAYBETTİ ❌": final_durum = "KAYBETTİ ❌"
-
-            else: final_durum = sonuc
-
-            
-
-            df_logs.loc[secilen, "Sonuc"] = final_durum
-
-            df_logs.to_csv(DB_FILE, index=False)
-
-            st.success("Maç sonucu başarıyla arşive işlendi!")
-
-            st.rerun()
-
-            
-
         st.write("---")
+        
+        # --- 2. Gelişmiş Filtreleme ve Arama Barı ---
+        st.markdown("### 🔍 Akıllı Filtreleme ve Arama")
+        f_c1, f_c2 = st.columns([2, 1])
+        with f_c1:
+            arama_terimi = st.text_input("Takım Adına Göre Arşivde Ara...", "").lower()
+        with f_c2:
+            durum_filtresi = st.selectbox("Duruma Göre Süz", ["Hepsi", "KAZANDI ✅", "KAYBETTİ ❌", "Bekliyor"])
+            
+        # Filtreleri Uygula
+        df_goster = df_logs.copy()
+        if arama_terimi:
+            df_goster = df_goster[df_goster["Ev Sahibi"].str.lower().str.contains(arama_terimi) | df_goster["Deplasman"].str.lower().str.contains(arama_terimi)]
+        if durum_filtresi != "Hepsi":
+            df_goster = df_goster[df_goster["Sonuc"] == durum_filtresi]
 
-        st.markdown("### 📋 Güncel Analiz Geçmişi")
+        # --- 3. MAÇ DURUMU GÜNCELLEME VE GELİŞMİŞ SİLME PANELİ ---
+        st.markdown("### 🛠️ Veritabanı Yönetim ve Operasyon Odası")
+        
+        # İşlemler için yan yana iki sütün: Biri Güncelleme, Biri Silme
+        tablo_c1, tablo_c2 = st.columns([1, 1])
+        
+        with tablo_c1:
+            st.markdown("<div style='background: #0f172a; padding:15px; border-radius:10px; border:1px solid #1e293b;'>", unsafe_allow_html=True)
+            st.markdown("##### ✏️ Maç Sonucu Güncelle")
+            secilen_index = st.selectbox(
+                "İşlem Yapılacak Maçı Seç", 
+                df_goster.index, 
+                format_func=lambda x: f"[{x}] {df_goster.loc[x, 'Ev Sahibi']} - {df_goster.loc[x, 'Deplasman']} ({df_goster.loc[x, 'Onerilen_Bahis']})"
+            )
+            
+            pazar_tipi = df_logs.loc[secilen_index, "Pazar_Tipi"]
+            if pazar_tipi == "Maç Sonucu":
+                secenekler = ["Bekliyor", "MS1 Bitti ✅", "X Bitti ✅", "MS2 Bitti ✅", "KAYBETTİ ❌"]
+            elif pazar_tipi == "2.5 Alt/Üst":
+                secenekler = ["Bekliyor", "2.5 Üst Bitti ✅", "2.5 Alt Bitti ✅", "KAYBETTİ ❌"]
+            elif pazar_tipi == "Karşılıklı Gol":
+                secenekler = ["Bekliyor", "KG Var Bitti ✅", "KG Yok Bitti ✅", "KAYBETTİ ❌"]
+            else:
+                secenekler = ["Bekliyor", "KAZANDI ✅", "KAYBETTİ ❌"]
+                
+            sonuc = st.selectbox("Gerçek Maç Sonucu Nedir?", secenekler, key="guncelle_select")
+            
+            if st.button("🔄 Sonucu İşle ve İstatistikleri Yenile", use_container_width=True):
+                onerilen = df_logs.loc[secilen_index, "Onerilen_Bahis"]
+                
+                # Kesin Kontrol Mekanizması (Hatalı yeşil tikleri önleyen kusursuz mantık)
+                if "MS1" in onerilen and sonuc == "MS1 Bitti ✅": final_durum = "KAZANDI ✅"
+                elif "MS2" in onerilen and sonuc == "MS2 Bitti ✅": final_durum = "KAZANDI ✅"
+                elif "Beraberlik" in onerilen and sonuc == "X Bitti ✅": final_durum = "KAZANDI ✅"
+                elif "2.5 Üst" in onerilen and sonuc == "2.5 Üst Bitti ✅": final_durum = "KAZANDI ✅"
+                elif "2.5 Alt" in onerilen and sonuc == "2.5 Alt Bitti ✅": final_durum = "KAZANDI ✅"
+                elif "KG Var" in onerilen and sonuc == "KG Var Bitti ✅": final_durum = "KAZANDI ✅"
+                elif "KG Yok" in onerilen and sonuc == "KG Yok Bitti ✅": final_durum = "KAZANDI ✅"
+                elif sonuc == "Bekliyor": final_durum = "Bekliyor"
+                else: final_durum = "KAYBETTİ ❌"  # Şartlar uyuşmuyorsa kupon net yatmıştır.
+                
+                df_logs.loc[secilen_index, "Sonuc"] = final_durum
+                df_logs.to_csv(DB_FILE, index=False)
+                st.success(f"[{secilen_index}] ID'li müsabaka başarıyla '{final_durum}' olarak güncellendi!")
+                st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+        with tablo_c2:
+            st.markdown("<div style='background: #180f14; padding:15px; border-radius:10px; border:1px solid #3f1616;'>", unsafe_allow_html=True)
+            st.markdown("<h5 style='color:#ef4444;'>🗑️ Veritabanından Analiz Sil</h5>", unsafe_allow_html=True)
+            silinecek_index = st.selectbox(
+                "Arşivden Tamamen Silinecek Maçı Seç", 
+                df_goster.index, 
+                format_func=lambda x: f"[{x}] {df_goster.loc[x, 'Ev Sahibi']} - {df_goster.loc[x, 'Deplasman']}"
+            )
+            
+            st.write("")
+            st.write(f"⚠️ **DİKKAT:** **[{silinecek_index}]** ID'li maç veritabanından kalıcı olarak silinecektir. Bu işlem geri alınamaz.")
+            st.write("")
+            
+            if st.button("💥 Seçilen Analizi Kalıcı Olarak Sil", use_container_width=True):
+                df_logs = df_logs.drop(silinecek_index).reset_index(drop=True)
+                df_logs.to_csv(DB_FILE, index=False)
+                st.error("Analiz kaydı arşivden söküldü ve imha edildi!")
+                st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+        st.write("---")
+        
+        # --- 4. RENKLENDİRİLMİŞ PREMIUM DATA FRAME GÖRÜNÜMÜ ---
+        st.markdown("### 📋 Güncel Analiz Log Dosyası Matrisi")
+        
+        # Renklendirme fonksiyonu (Milyon dolarlık finans şirketleri tasarımı)
+        def satır_renklendir(val):
+            if val == "KAZANDI ✅":
+                return "background-color: #064e3b; color: #10b981; font-weight: bold;"
+            elif val == "KAYBETTİ ❌":
+                return "background-color: #7f1d1d; color: #f87171; font-weight: bold;"
+            elif val == "Bekliyor":
+                return "background-color: #78350f; color: #fbbf24; font-weight: bold;"
+            return ""
+            
+        # Sadece Görsel Tabloyu Şıklaştırmak İçin Stil Uygulama
+        styled_df = df_goster.style.map(satır_renklendir, subset=["Sonuc"])
+        
+        st.dataframe(styled_df, use_container_width=True, height=350)
 
         st.dataframe(df_logs, use_container_width=True) 
