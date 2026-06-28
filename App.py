@@ -5,8 +5,6 @@ import os
 import math
 from datetime import datetime
 import numpy as np
-import tkinter as tk
-from tkinter import ttk
 
 # --- SEZGİN GÖRMÜŞ AI PRO v7.0 SAYFA AYARLARI ---
 st.set_page_config(page_title="Sezgin Görmüş Veri Analizi v7.0", page_icon="🔮", layout="wide")
@@ -49,83 +47,6 @@ def mac_simule_et(ev_gol_beklentisi, dep_gol_beklentisi):
     ms2_yuzde = (ms2_sayisi / simulasyon_sayisi) * 100
     
     return ms1_yuzde, x_yuzde, ms2_yuzde
-
-# 1. BÜYÜK LİG VE TAKIM VERİTABANI (İstediğin kadar ülke ve 2. lig ekleyebilirsin)
-LIG_VERITABANI = {
-    "Türkiye Trendyol Süper Lig": [
-        "Galatasaray", "Fenerbahçe", "Beşiktaş", "Trabzonspor", "Başakşehir", 
-        "Kasımpaşa", "Göztepe", "Samsunspor", "Alanyaspor", "Rizespor","Çorum FK",
-        "Amed SK","Erzurumspor FK","Eyüpspor","Gençlerbirliği","Gaziantep FK","Kocaelispor","Konyaspor"
-    ],
-    "Türkiye Trendyol 1. Lig": [
-        "Ankara Keçiörengücü", "Antalyaspor", "Bandırmaspor", "Batman Petrolspor", 
-        "Bodrum", "Boluspor", "Bursaspor", "Esenler Erokspor", "Fatih Karagümrük",
-        "Iğdır","İstanbulspor","Kayserispor","Manisa","Mardin 1969","Muğlaspor","Pendikspor","Sarıyer","Sivasspor",
-        "Ümraniyespor","Vanspor"
-    ],
-    "İngiltere Premier Lig": [
-        "Arsenal", "Aston Villa", "Bournemouth", "Brentford", "Brighton & Hove Albion", 
-        "Chelsea", "Coventry City", "Crystal Palace", "Everton", "Fulham",
-        "Hull City","Ipswich Town","Leeds United","Liverpool","Manchester City",
-        "Manchester United","Newcastle United","Nottingham Forest","Sunderland","Tottenham Hotspur"
-    ],
-    "İngiltere Championship": [
-        "Blackburn Rovers", "Bristol City", "Burnley", "Cardiff City", "Birmingham City",
-        "Derby County", "Lincoln City", "Bolton Wanderers", "Charlton Athletic",
-        "Middlesbrough", "Millwall", "Norwich City",
-        "Portsmouth", "Preston North End", "Queens Park Rangers", "Sheffield United",
-        "Stoke City", "", "Swansea City", "Watford", "West Bromwich Albion",
-        "Wolverhampton Wanderers","West Ham United","Wrexham","Southampton"
-    ],
-    "İtalya Serie B": [
-        "Verona", "Avellino", "Carrarese", "Catanzaro", "Cesena",
-        "Padova", "Virtus Entella", "Empoli", "Juve Stabia", "Mantova",
-        "Modena", "Pisa", "LR Vicenza", "Salernitana", "Sampdoria",
-        "Benevento", "Arezzo", "Sudtirol"
-    ],
-    "İtalya Serie A": [
-        "AC Milan", "AS Roma", "Atalanta", "Bologna", "Cagliari",
-        "Como", "", "Frosinone", "Fiorentina", "Genoa",
-        "Inter", "Juventus", "Lazio", "Lecce", "Sassuolo",
-        "Napoli", "Palermo", "Parma", "Torino", "Udinese",
-        "Venezia", "Monza"
-    ],
-    "İspanya Segunda Division": [
-        "Albacete", "Almeria", "Burgos", "Cadiz", "Andorra",
-        "Castellon", "Cordoba", "Celta Fortuna", "Eibar", "Ceuta",
-        "Eldense", "Girona", "Granada", "Las Palmas", "Leganés",
-        "Mallorca", "Oviedo", "Real Sociedad B", "Tenerife", "Sabadell",
-        "Sporting Gijón","Valladolid"
-    ],
-    "İspanya La Liga": [
-        "Alaves", "Athletic Bilbao", "Atletico Madrid", "Barcelona", "Celta Vigo",
-        "Espanyol", "Getafe", "Elche", "Deportivo La Coruña", "Leganes",
-        "Mallorca", "Osasuna", "Racing Santander", "Rayo Vallecano", "Real Betis",
-        "Real Madrid", "Real Oviedo", "Real Sociedad", "Sevilla", "Valencia",
-        "Levante", "Villarreal"
-    ],
-    "Almanya Bundesliga": [
-        "Augsburg", "Bayer Leverkusen", "Bayern Münih", "Borussia Dortmund", "Borussia Mönchengladbach",
-        "Eintracht Frankfurt", "Freiburg", "Elversberg", "Hoffenheim", "Hamburg",
-        "Mainz 05", "RB Leipzig", "Köln", "Paderborn 07", "Stuttgart",
-        "Union Berlin", "Schalke 04", "Werder Bremen"
-    ],
-}
-
-def lig_degisti(event):
-    """Lig seçildiğinde ev sahibi ve deplasman takımlarının listesini günceller"""
-    secilen_lig = lig_kutusu.get()
-    
-    if secilen_lig in LIG_VERITABANI:
-        takimlar = LIG_VERITABANI[secilen_lig]
-        
-        # Ev sahibi ve Deplasman kutularının listesini güncelle
-        ev_sahibi_kutusu['values'] = takimlar
-        deplasman_kutusu['values'] = takimlar
-        
-        # Kutuların içindeki eski yazıları temizle ve ilk takımı seçtir
-        ev_sahibi_kutusu.set("Takım Seçiniz...")
-        deplasman_kutusu.set("Takım Seçiniz...")
 
 # --- HİBRİT LİG VE TAKIM SEÇİM ALANI (SAF STREAMLIT) ---
 st.sidebar.markdown("### 🏟️ Müsabaka Seçim Odası")
