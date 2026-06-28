@@ -4,7 +4,6 @@ import plotly.graph_objects as go
 import os
 import math
 from datetime import datetime
-import tkinter as tk
 import numpy as np
 
 # --- SEZGİN GÖRMÜŞ AI PRO v7.0 SAYFA AYARLARI ---
