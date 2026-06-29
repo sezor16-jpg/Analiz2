@@ -550,15 +550,17 @@ with sekme3:
                 durum_sinifi = "k-yatti"
                 renk = "#ffffff"            
             with c:
+                # 1. KARTIN BAŞINI AÇIYORUZ
                 st.markdown(f'''
-                    <div class="k-card {durum_sinifi}" style="padding: 15px; margin-bottom: 15px; border-radius: 8px;">
-                        <div style="margin-bottom:10px;">
-                            <div style="font-weight:bold; font-size:16px;">{row["Kupon_ID"]}</div>
-                            <div style="color:{renk}; font-weight:bold;">{row["Durum"]}</div>
-                            <div style="font-size:14px; color:#ffffff; margin-bottom:15px;">Yatırılan Tutar: {row["Yatirilan_Tutar"]} TL</div>
+                    <div class="k-card {durum_sinifi}" style="padding: 15px; margin-bottom: 20px; border-radius: 12px; border: 1px solid #334155;">
+                        <div style="border-bottom: 1px solid rgba(255,255,255,0.2); margin-bottom:10px; padding-bottom:10px;">
+                            <div style="font-weight:bold; font-size:18px;">{row["Kupon_ID"]}</div>
+                            <div style="font-weight:bold; font-size:16px;">{row["Durum"]}</div>
+                            <div style="font-size:14px; opacity:0.9;">Yatırılan Tutar: {row["Yatirilan_Tutar"]} TL</div>
                         </div>
                 ''', unsafe_allow_html=True)
                 
+                # 2. MAÇ LİSTESİNİ KARTIN İÇİNE DÖKÜYORUZ
                 if pd.notna(row["Mac_IDleri"]):
                     idler = str(row["Mac_IDleri"]).split(",")
                     for mid in idler:
@@ -567,22 +569,21 @@ with sekme3:
                             if m_idx in df_logs.index:
                                 m_isim = f"{df_logs.at[m_idx, 'Ev Sahibi']} - {df_logs.at[m_idx, 'Deplasman']}"
                                 m_sonuc = df_logs.at[m_idx, 'Sonuc']
-                                m_renk = "#e2e8f0"
                                 ikon = "⏳"
-                                if m_sonuc == "KAZANDI ✅": m_renk = "#10b981"; ikon = "✅"
-                                elif m_sonuc == "KAYBETTİ ❌": m_renk = "#ef4444"; ikon = "❌"
+                                if m_sonuc == "KAZANDI ✅": ikon = "✅"
+                                elif m_sonuc == "KAYBETTİ ❌": ikon = "❌"
                                 
                                 st.markdown(f'''
-                                    <div class="m-satir" style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                                        <span>{m_isim}</span><span style="color:{m_renk}; font-weight:bold;">{ikon}</span>
+                                    <div style="display:flex; justify-content:space-between; padding:4px 0; font-size:14px;">
+                                        <span>{m_isim}</span><span>{ikon}</span>
                                     </div>
                                 ''', unsafe_allow_html=True)
                         except: pass
                 
-                # Div'i kapatmadan butonu Streamlit ile değil, yine aynı div'in içine yerleştiriyoruz
+                # 3. SİLME BUTONUNU KARTIN ALTINA EKLE VE KARTI KAPAT
                 if st.button(f"🗑️ {row['Kupon_ID']} Sil", key=f"sil_{row['Kupon_ID']}"):
                     df_kuponlar = df_kuponlar.drop(idx).reset_index(drop=True)
                     df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
                     st.rerun()
                     
-                st.markdown('</div>', unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True) # K-CARD KAPANIŞI
