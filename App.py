@@ -643,186 +643,154 @@ with sekme3:
                 renk = "#ef4444"
                 durum_yazi = "❌ Yattı"
 
-            with c:
+            ```python
+with c:
+    st.markdown(
+        f'<div class="k-card {durum_sinifi}">',
+        unsafe_allow_html=True
+    )
 
-                st.markdown(
-                    f'<div class="k-card {durum_sinifi}">',
-                    unsafe_allow_html=True
-                )
+    col_left, col_right = st.columns([3, 1])
 
-                st.markdown(
-                    f'''
-                    <div style="display:flex;
-                                justify-content:space-between;
-                                margin-bottom:10px;">
-                        <span style="font-weight:bold;
-                                    font-size:16px;">
-                            {row["Kupon_ID"]}
-                        </span>
+    with col_left:
+        st.markdown(
+            f"### {row['Kupon_ID']}"
+        )
+        st.caption(
+            f"Yatırılan Tutar: {row['Yatirilan_Tutar']} TL"
+        )
 
-                        <span style="color:{renk};
-                                    font-weight:bold;">
-                            {durum_yazi}
-                        </span>
-                    </div>
+    with col_right:
+        if row["Durum"] == "TUTTU":
+            st.success("🎉 Tuttu")
 
-                    <div style="
-                        font-size:12px;
-                        color:#94a3b8;
-                        margin-bottom:15px;
-                    ">
-                        Yatırılan Tutar:
-                        {row["Yatirilan_Tutar"]} TL
-                    </div>
-                    ''',
-                    unsafe_allow_html=True
-                )
+        elif row["Durum"] == "YATTI":
+            st.error("❌ Yattı")
 
-                if pd.notna(row["Mac_IDleri"]):
+        else:
+            st.warning("⏳ Bekliyor")
 
-                    idler = str(
-                        row["Mac_IDleri"]
-                    ).split(",")
+    st.write("")
 
-                    toplam_mac = len(idler)
-                    tutan_mac = 0
+    if pd.notna(row["Mac_IDleri"]):
 
-                    for mid in idler:
-                        try:
+        idler = str(row["Mac_IDleri"]).split(",")
 
-                            m_idx = int(mid)
+        toplam_mac = len(idler)
+        tutan_mac = 0
 
-                            if m_idx in df_logs.index:
+        for mid in idler:
 
-                                m_isim = (
-                                    f"{df_logs.at[m_idx,'Ev Sahibi']} - "
-                                    f"{df_logs.at[m_idx,'Deplasman']}"
-                                )
+            try:
+                m_idx = int(mid)
 
-                                m_bahis = df_logs.at[
-                                    m_idx,
-                                    "Onerilen_Bahis"
-                                ]
+                if m_idx in df_logs.index:
 
-                                m_sonuc = df_logs.at[
-                                    m_idx,
-                                    "Sonuc"
-                                ]
+                    m_isim = (
+                        f"{df_logs.at[m_idx,'Ev Sahibi']} - "
+                        f"{df_logs.at[m_idx,'Deplasman']}"
+                    )
 
-                                ikon = "⏳"
-                                m_renk = "#e2e8f0"
+                    m_bahis = df_logs.at[
+                        m_idx,
+                        "Onerilen_Bahis"
+                    ]
 
-                                if m_sonuc == "KAZANDI":
-                                    ikon = "✅"
-                                    m_renk = "#10b981"
-                                    tutan_mac += 1
+                    m_sonuc = df_logs.at[
+                        m_idx,
+                        "Sonuc"
+                    ]
 
-                                elif m_sonuc == "KAYBETTI":
-                                    ikon = "❌"
-                                    m_renk = "#ef4444"
+                    if m_sonuc == "KAZANDI":
+                        ikon = "✅"
+                        tutan_mac += 1
 
-                                st.markdown(
-                                    f'''
-                                    <div class="m-satir">
-                                        <span>
-                                            {m_isim}
-                                            <br>
-
-                                            <span style="
-                                                font-size:11px;
-                                                color:#94a3b8;
-                                            ">
-                                                Tahmin:
-                                                {m_bahis}
-                                            </span>
-                                        </span>
-
-                                        <span style="
-                                            color:{m_renk};
-                                            font-weight:bold;
-                                        ">
-                                            {ikon}
-                                        </span>
-                                    </div>
-                                    ''',
-                                    unsafe_allow_html=True
-                                )
-
-                            else:
-                                st.markdown(
-                                    '''
-                                    <div class="m-satir">
-                                        <span>
-                                            (Silinmiş Maç Kaydı)
-                                        </span>
-                                    </div>
-                                    ''',
-                                    unsafe_allow_html=True
-                                )
-
-                        except Exception as e:
-                            st.warning(
-                                f"Maç okunurken hata oluştu: {e}"
-                            )
-
-                    if row["Durum"] in [
-                        "TUTTU",
-                        "YATTI"
-                    ]:
-                        yuzde = 100
-                    else:
-                        yuzde = (
-                            int(
-                                (
-                                    tutan_mac /
-                                    toplam_mac
-                                ) * 100
-                            )
-                            if toplam_mac > 0
-                            else 0
-                        )
-
-                    if row["Durum"] == "TUTTU":
-                        progress_text = (
-                            f"Kupon Kazandı "
-                            f"({toplam_mac}/{toplam_mac})"
-                        )
-
-                    elif row["Durum"] == "YATTI":
-                        progress_text = (
-                            f"Kupon Kaybetti "
-                            f"({tutan_mac}/{toplam_mac})"
-                        )
+                    elif m_sonuc == "KAYBETTI":
+                        ikon = "❌"
 
                     else:
-                        progress_text = (
-                            f"Tutan Maç: "
-                            f"{tutan_mac}/{toplam_mac}"
+                        ikon = "⏳"
+
+                    mc1, mc2 = st.columns([5, 1])
+
+                    with mc1:
+                        st.markdown(
+                            f"**{m_isim}**"
+                        )
+                        st.caption(
+                            f"Tahmin: {m_bahis}"
                         )
 
-                    st.progress(
-                        yuzde,
-                        text=progress_text
+                    with mc2:
+                        st.markdown(
+                            f"### {ikon}"
+                        )
+
+                else:
+                    st.info(
+                        "Silinmiş maç kaydı"
                     )
 
-                if st.button(
-                    f"🗑️ {row['Kupon_ID']} Sil",
-                    key=f"sil_{row['Kupon_ID']}"
-                ):
-                    df_kuponlar = (
-                        df_kuponlar
-                        .drop(idx)
-                        .reset_index(drop=True)
-                    )
-
-                    df_kuponlar.to_csv(
-                        KUPON_DB_FILE,
-                        index=False
-                    )
-
-                    st.rerun()
-
-                st.markdown(
-                    '</div>',
-                    unsafe_allow_html=True
+            except Exception as e:
+                st.warning(
+                    f"Hata: {e}"
                 )
+
+        if row["Durum"] in ["TUTTU", "YATTI"]:
+            yuzde = 100
+        else:
+            yuzde = (
+                int(
+                    (tutan_mac / toplam_mac) * 100
+                )
+                if toplam_mac > 0
+                else 0
+            )
+
+        if row["Durum"] == "TUTTU":
+            progress_text = (
+                f"Kupon Kazandı "
+                f"({toplam_mac}/{toplam_mac})"
+            )
+
+        elif row["Durum"] == "YATTI":
+            progress_text = (
+                f"Kupon Kaybetti "
+                f"({tutan_mac}/{toplam_mac})"
+            )
+
+        else:
+            progress_text = (
+                f"Tutan Maç: "
+                f"{tutan_mac}/{toplam_mac}"
+            )
+
+        st.progress(
+            yuzde,
+            text=progress_text
+        )
+
+    if st.button(
+        f"🗑️ {row['Kupon_ID']} Sil",
+        key=f"sil_{row['Kupon_ID']}"
+    ):
+
+        df_kuponlar = (
+            df_kuponlar
+            .drop(idx)
+            .reset_index(drop=True)
+        )
+
+        df_kuponlar.to_csv(
+            KUPON_DB_FILE,
+            index=False
+        )
+
+        st.rerun()
+
+    st.markdown(
+        '</div>',
+        unsafe_allow_html=True
+    )
+```
+
