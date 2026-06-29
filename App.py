@@ -4,7 +4,6 @@ import plotly.graph_objects as go
 import os
 import math
 from datetime import datetime
-import uuid
 import numpy as np
 
 # --- SEZGİN GÖRMÜŞ AI PRO v8.0 SAYFA AYARLARI ---
@@ -170,7 +169,6 @@ LIG_VERITABANI = {
         "Rodez", "St Etienne", "Sochaux"
     ]
 }
-    
 
 # --- PREMIUM GÖRSEL ARAYÜZ TASARIMI (CSS) ---
 st.markdown("""
@@ -471,326 +469,130 @@ with sekme2:
 with sekme3:
     st.markdown('<div class="badge">🎟️ OTOMATİK KUPON MERKEZİ v8.0</div>', unsafe_allow_html=True)
     st.title("🎟️ Akıllı Kupon Odası & Kasa")
-
+    
     df_kuponlar = pd.read_csv(KUPON_DB_FILE)
     df_logs = pd.read_csv(DB_FILE)
-
+    
     k_col1, k_col2 = st.columns([1, 1])
-
-    # ==========================================================
-    # YENİ KUPON OLUŞTURMA
-    # ==========================================================
+    
     with k_col1:
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
         st.subheader("➕ Yeni Kupon Mühürle")
-
+        
         if len(df_logs) == 0:
             st.warning("Önce analiz kaydedip arşive maç eklemelisin kanka.")
         else:
-            mac_secenekleri = (
-                df_logs.index.astype(str)
-                + " - "
-                + df_logs["Ev Sahibi"]
-                + " vs "
-                + df_logs["Deplasman"]
-                + " ("
-                + df_logs["Onerilen_Bahis"]
-                + ")"
-            )
-
-            secilen_maclar = st.multiselect(
-                "Kupona Eklenecek Maçlar:",
-                mac_secenekleri
-            )
-
-            yatirilan_para = st.number_input(
-                "Yatırılan Tutar (TL):",
-                min_value=10,
-                value=100,
-                step=10
-            )
-
+            mac_secenekleri = df_logs.index.astype(str) + " - " + df_logs["Ev Sahibi"] + " vs " + df_logs["Deplasman"] + " (" + df_logs["Onerilen_Bahis"] + ")"
+            secilen_maclar = st.multiselect("Kupona Eklenecek Maçlar:", mac_secenekleri)
+            
+            yatirilan_para = st.number_input("Yatırılan Tutar (TL):", min_value=10, value=100, step=10)
+            
             if st.button("🎟️ Kuponu Sisteme Göm"):
                 if len(secilen_maclar) == 0:
-                    st.error("En az 1 maç seçmelisin kanka.")
+                    st.error("En az 1 maç seçmelisin kanka!")
                 else:
-                    secilen_idler = [
-                        m.split(" - ")[0]
-                        for m in secilen_maclar
-                    ]
-
+                    secilen_idler = [m.split(" - ")[0] for m in secilen_maclar]
                     mac_idler_str = ",".join(secilen_idler)
-
-                    yeni_id = f"KPN-{uuid.uuid4().hex[:8].upper()}"
-
+                    
+                    yeni_id = f"KPN-{len(df_kuponlar) + 1001}"
                     yeni_kupon = {
                         "Kupon_ID": yeni_id,
                         "Mac_IDleri": mac_idler_str,
                         "Yatirilan_Tutar": yatirilan_para,
-                        "Durum": "BEKLIYOR",
+                        "Durum": "Bekliyor",
                         "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M")
                     }
-
-                    df_kuponlar = pd.concat(
-                        [
-                            df_kuponlar,
-                            pd.DataFrame([yeni_kupon])
-                        ],
-                        ignore_index=True
-                    )
-
-                    df_kuponlar.to_csv(
-                        KUPON_DB_FILE,
-                        index=False
-                    )
-
-                    kuponlari_otomatik_guncelle()
-
-                    st.success(
-                        f"{yeni_id} başarıyla oluşturuldu."
-                    )
-
+                    df_kuponlar = pd.concat([df_kuponlar, pd.DataFrame([yeni_kupon])], ignore_index=True)
+                    df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
+                    kuponlari_otomatik_guncelle() # Ekler eklemez kontrol et
+                    st.success(f"{yeni_id} Kasaya Mühürlendi!")
                     st.rerun()
-
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # ==========================================================
-    # KASA ANALİZİ
-    # ==========================================================
     with k_col2:
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
         st.subheader("📊 Kasa Analizi")
-
         if len(df_kuponlar) > 0:
-
-            tutan_k = len(
-                df_kuponlar[
-                    df_kuponlar["Durum"] == "TUTTU"
-                ]
-            )
-
-            yatan_k = len(
-                df_kuponlar[
-                    df_kuponlar["Durum"] == "YATTI"
-                ]
-            )
-
-            bekleyen_k = len(
-                df_kuponlar[
-                    df_kuponlar["Durum"] == "BEKLIYOR"
-                ]
-            )
-
-            toplam_yatirilan = (
-                df_kuponlar["Yatirilan_Tutar"]
-                .sum()
-            )
-
-            st.metric(
-                "💰 Toplam Yatırılan Bakiye",
-                f"{toplam_yatirilan:.0f} TL"
-            )
-
-            c1, c2, c3 = st.columns(3)
-
-            c1.metric(
-                "✅ Tutan",
-                tutan_k
-            )
-
-            c2.metric(
-                "❌ Yatan",
-                yatan_k
-            )
-
-            c3.metric(
-                "⏳ Bekleyen",
-                bekleyen_k
-            )
-
+            tutan_k = len(df_kuponlar[df_kuponlar["Durum"] == "TUTTU 🎉"])
+            yatan_k = len(df_kuponlar[df_kuponlar["Durum"] == "YATTI ❌"])
+            toplam_yatirilan = df_kuponlar["Yatirilan_Tutar"].sum()
+            
+            st.metric(label="💰 Toplam Yatırılan Bakiye", value=f"{toplam_yatirilan} TL")
+            c_k1, c_k2 = st.columns(2)
+            c_k1.metric(label="✅ Tutan Kupon", value=tutan_k)
+            c_k2.metric(label="❌ Yatan Kupon", value=yatan_k)
         else:
-            st.info("Henüz oluşturulmuş kupon bulunmuyor.")
-
+            st.info("Henüz mühürlenmiş kupon yok.")
         st.markdown('</div>', unsafe_allow_html=True)
-
+        
     st.write("---")
     st.markdown("### 📋 Aktif Dijital Kupon Fişleri")
-
-    # ==========================================================
-    # KUPON LİSTESİ
-    # ==========================================================
+    
     if len(df_kuponlar) > 0:
-
+        # KUPONLARI KART OLARAK ÇİZME ALANI
+        satir_sayisi = 0
         kolonlar = st.columns(2)
-
-        for sira, (idx, row) in enumerate(
-            df_kuponlar.iloc[::-1].iterrows()
-        ):
-
-            c = kolonlar[sira % 2]
-
+        
+        for idx, row in df_kuponlar.iloc[::-1].iterrows(): # Sondan başa doğru diz
+            c = kolonlar[satir_sayisi % 2]
+            satir_sayisi += 1
+            
             durum_sinifi = "k-bekliyor"
             renk = "#f59e0b"
-            durum_yazi = "⏳ Bekliyor"
-
-            if row["Durum"] == "TUTTU":
+            if row["Durum"] == "TUTTU 🎉": 
                 durum_sinifi = "k-tuttu"
                 renk = "#10b981"
-                durum_yazi = "🎉 Tuttu"
-
-            elif row["Durum"] == "YATTI":
+            elif row["Durum"] == "YATTI ❌": 
                 durum_sinifi = "k-yatti"
                 renk = "#ef4444"
-                durum_yazi = "❌ Yattı"
-
-            ```python
-with c:
-    st.markdown(
-        f'<div class="k-card {durum_sinifi}">',
-        unsafe_allow_html=True
-    )
-
-    col_left, col_right = st.columns([3, 1])
-
-    with col_left:
-        st.markdown(
-            f"### {row['Kupon_ID']}"
-        )
-        st.caption(
-            f"Yatırılan Tutar: {row['Yatirilan_Tutar']} TL"
-        )
-
-    with col_right:
-        if row["Durum"] == "TUTTU":
-            st.success("🎉 Tuttu")
-
-        elif row["Durum"] == "YATTI":
-            st.error("❌ Yattı")
-
-        else:
-            st.warning("⏳ Bekliyor")
-
-    st.write("")
-
-    if pd.notna(row["Mac_IDleri"]):
-
-        idler = str(row["Mac_IDleri"]).split(",")
-
-        toplam_mac = len(idler)
-        tutan_mac = 0
-
-        for mid in idler:
-
-            try:
-                m_idx = int(mid)
-
-                if m_idx in df_logs.index:
-
-                    m_isim = (
-                        f"{df_logs.at[m_idx,'Ev Sahibi']} - "
-                        f"{df_logs.at[m_idx,'Deplasman']}"
-                    )
-
-                    m_bahis = df_logs.at[
-                        m_idx,
-                        "Onerilen_Bahis"
-                    ]
-
-                    m_sonuc = df_logs.at[
-                        m_idx,
-                        "Sonuc"
-                    ]
-
-                    if m_sonuc == "KAZANDI":
-                        ikon = "✅"
-                        tutan_mac += 1
-
-                    elif m_sonuc == "KAYBETTI":
-                        ikon = "❌"
-
-                    else:
-                        ikon = "⏳"
-
-                    mc1, mc2 = st.columns([5, 1])
-
-                    with mc1:
-                        st.markdown(
-                            f"**{m_isim}**"
-                        )
-                        st.caption(
-                            f"Tahmin: {m_bahis}"
-                        )
-
-                    with mc2:
-                        st.markdown(
-                            f"### {ikon}"
-                        )
-
-                else:
-                    st.info(
-                        "Silinmiş maç kaydı"
-                    )
-
-            except Exception as e:
-                st.warning(
-                    f"Hata: {e}"
-                )
-
-        if row["Durum"] in ["TUTTU", "YATTI"]:
-            yuzde = 100
-        else:
-            yuzde = (
-                int(
-                    (tutan_mac / toplam_mac) * 100
-                )
-                if toplam_mac > 0
-                else 0
-            )
-
-        if row["Durum"] == "TUTTU":
-            progress_text = (
-                f"Kupon Kazandı "
-                f"({toplam_mac}/{toplam_mac})"
-            )
-
-        elif row["Durum"] == "YATTI":
-            progress_text = (
-                f"Kupon Kaybetti "
-                f"({tutan_mac}/{toplam_mac})"
-            )
-
-        else:
-            progress_text = (
-                f"Tutan Maç: "
-                f"{tutan_mac}/{toplam_mac}"
-            )
-
-        st.progress(
-            yuzde,
-            text=progress_text
-        )
-
-    if st.button(
-        f"🗑️ {row['Kupon_ID']} Sil",
-        key=f"sil_{row['Kupon_ID']}"
-    ):
-
-        df_kuponlar = (
-            df_kuponlar
-            .drop(idx)
-            .reset_index(drop=True)
-        )
-
-        df_kuponlar.to_csv(
-            KUPON_DB_FILE,
-            index=False
-        )
-
-        st.rerun()
-
-    st.markdown(
-        '</div>',
-        unsafe_allow_html=True
-    )
-```
-
+                
+            with c:
+                st.markdown(f'<div class="k-card {durum_sinifi}">', unsafe_allow_html=True)
+                st.markdown(f'<div style="display:flex; justify-content:space-between; margin-bottom:10px;">'
+                            f'<span style="font-weight:bold; font-size:16px;">{row["Kupon_ID"]}</span>'
+                            f'<span style="color:{renk}; font-weight:bold;">{row["Durum"]}</span></div>'
+                            f'<div style="font-size:12px; color:#94a3b8; margin-bottom:15px;">Yatırılan Tutar: {row["Yatirilan_Tutar"]} TL</div>', 
+                            unsafe_allow_html=True)
+                
+                # Kupon içindeki maçları tarama
+                if pd.notna(row["Mac_IDleri"]):
+                    idler = str(row["Mac_IDleri"]).split(",")
+                    toplam_mac = len(idler)
+                    tutan_mac = 0
+                    
+                    for mid in idler:
+                        try:
+                            m_idx = int(mid)
+                            if m_idx in df_logs.index:
+                                m_isim = f"{df_logs.at[m_idx, 'Ev Sahibi']} - {df_logs.at[m_idx, 'Deplasman']}"
+                                m_bahis = df_logs.at[m_idx, 'Onerilen_Bahis']
+                                m_sonuc = df_logs.at[m_idx, 'Sonuc']
+                                
+                                m_renk = "#e2e8f0"
+                                ikon = "⏳"
+                                if m_sonuc == "KAZANDI ✅": 
+                                    m_renk = "#10b981"; ikon = "✅"; tutan_mac += 1
+                                elif m_sonuc == "KAYBETTİ ❌": 
+                                    m_renk = "#ef4444"; ikon = "❌"
+                                
+                                st.markdown(f'<div class="m-satir">'
+                                            f'<span>{m_isim} <br> <span style="font-size:11px; color:#94a3b8;">Tahmin: {m_bahis}</span></span>'
+                                            f'<span style="color:{m_renk}; font-weight:bold;">{ikon}</span>'
+                                            f'</div>', unsafe_allow_html=True)
+                            else:
+                                st.markdown('<div class="m-satir"><span>(Silinmiş Maç Kaydı)</span></div>', unsafe_allow_html=True)
+                        except:
+                            pass
+                    
+                    # Progress bar
+                    yuzde = int((tutan_mac / toplam_mac) * 100) if toplam_mac > 0 else 0
+                    st.write("")
+                    st.progress(yuzde, text=f"Tutan Maç: {tutan_mac} / {toplam_mac}")
+                
+                # SİLME BUTONU
+                if st.button(f"🗑️ {row['Kupon_ID']} Sil", key=f"sil_{row['Kupon_ID']}"):
+                    df_kuponlar = df_kuponlar.drop(idx).reset_index(drop=True)
+                    df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
+                    st.rerun()
+                    
+                st.markdown('</div>', unsafe_allow_html=True)
