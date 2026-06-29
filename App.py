@@ -6,8 +6,8 @@ import math
 from datetime import datetime
 import numpy as np
 
-# --- SEZGİN GÖRMÜŞ AI PRO v7.0 SAYFA AYARLARI ---
-st.set_page_config(page_title="Sezgin Görmüş Veri Analizi v7.0", page_icon="🔮", layout="wide")
+# --- SEZGİN GÖRMÜŞ AI PRO v8.0 SAYFA AYARLARI ---
+st.set_page_config(page_title="Sezgin Görmüş Veri Analizi v8.0", page_icon="🔮", layout="wide")
 
 DB_FILE = "analiz_gunlugu.csv"
 if not os.path.exists(DB_FILE):
@@ -18,11 +18,48 @@ if not os.path.exists(DB_FILE):
     ])
     df.to_csv(DB_FILE, index=False)
 
+# Yeni Kupon DB Yapısı (Eskisini otomatik uyarlar)
 KUPON_DB_FILE = "kuponlar_gunlugu.csv"
 if not os.path.exists(KUPON_DB_FILE):
-    pd.DataFrame(columns=["Kupon_ID", "Mac_Detaylari", "Yatirilan_Tutar", "Durum", "Tarih"]).to_csv(KUPON_DB_FILE, index=False)
+    pd.DataFrame(columns=["Kupon_ID", "Mac_IDleri", "Yatirilan_Tutar", "Durum", "Tarih"]).to_csv(KUPON_DB_FILE, index=False)
+else:
+    temp_df = pd.read_csv(KUPON_DB_FILE)
+    if "Mac_IDleri" not in temp_df.columns:
+        pd.DataFrame(columns=["Kupon_ID", "Mac_IDleri", "Yatirilan_Tutar", "Durum", "Tarih"]).to_csv(KUPON_DB_FILE, index=False)
 
-# --- 📐 KUSURSUZ POISSON MOTORU (PROFESYONEL LİMİT: 11) ---
+# --- 🤖 KUPON OTOMASYON MOTORU ---
+def kuponlari_otomatik_guncelle():
+    df_k = pd.read_csv(KUPON_DB_FILE)
+    df_l = pd.read_csv(DB_FILE)
+    
+    if len(df_k) == 0: return
+    
+    for idx, row in df_k.iterrows():
+        if pd.isna(row["Mac_IDleri"]): continue
+        
+        mac_idler = str(row["Mac_IDleri"]).split(",")
+        durumlar = []
+        
+        for mid in mac_idler:
+            try:
+                m_idx = int(mid)
+                if m_idx in df_l.index:
+                    durumlar.append(df_l.at[m_idx, "Sonuc"])
+                else:
+                    durumlar.append("SİLİNMİŞ MAÇ")
+            except:
+                pass
+                
+        if "KAYBETTİ ❌" in durumlar:
+            df_k.at[idx, "Durum"] = "YATTI ❌"
+        elif all(d == "KAZANDI ✅" for d in durumlar) and len(durumlar) > 0:
+            df_k.at[idx, "Durum"] = "TUTTU 🎉"
+        else:
+            df_k.at[idx, "Durum"] = "Bekliyor"
+            
+    df_k.to_csv(KUPON_DB_FILE, index=False)
+
+# --- 📐 KUSURSUZ POISSON MOTORU ---
 def poisson_olasilik(k, lmbda):
     if lmbda <= 0: return 1.0 if k == 0 else 0.0
     return (math.exp(-lmbda) * (lmbda**k)) / math.factorial(k)
@@ -101,6 +138,36 @@ LIG_VERITABANI = {
         "Mainz 05", "RB Leipzig", "Köln", "Paderborn 07", "Stuttgart",
         "Union Berlin", "Schalke 04", "Werder Bremen"
     ],
+    "Almanya Bundesliga 2": [
+        "Hertha BSC", "Arminia Bielefeld", "VfL Bochum", "Eintracht Braunschweig", "Energie Cottbus",
+        "Darmstadt 98", "Dinamo Dresden", "Greuther Fürth", "Hannover 96", "1. FC Heidenheim",
+        "1. FC Kaiserslautern", "Karlsruher SC", "Holstein Kiel", "1. FC Magdeburg", "1. FC Nürnberg",
+        "VfL Osnabrück", "FC St. Pauli", "VfL Wolfsburg"
+    ],
+    "Hollanda Eredivisie": [
+        "ADO Den Haag", "Ajax", "AZ", "Cambuur", "Excelsior",
+        "Feyenoord", "Fortuna Sittard", "Go Ahead Eagles", "Groningen", "Heerenveen",
+        "N.E.C.", "PEC Zwolle", "PSV", "Sparta Rotterdam", "Telstar",
+        "Twente", "Utrecht", "Willem II"
+    ],
+    "Hollanda Eerste Divisie": [
+        "Jong Ajax", "Almere City", "Jong AZ", "De Graafschap", "Den Bosch",
+        "FC Dordrecht", "FC Eindhoven", "Emmen", "Helmond", "Heracles",
+        "Maastricht", "NAC Breda", "Jong PSV", "Waalwijk", "Roda",
+        "TOP Oss", "Jong Utrecht", "Vitesse","Volendam","VVV Venlo"
+    ],
+    "Fransa Ligue 1": [
+        "Angers", "Brest", "Le Mans", "Lens", "Lille",
+        "Lorient", "Lyon", "Marseille", "Monaco", "Paris",
+        "Paris Saint-Germain", "Rennes", "Strasbourg", "Toulouse", "Troyes",
+        "", "", ""
+    ],
+    "Fransa Ligue 2": [
+        "Annecy", "Boulogne", "Clermont", "Dijon", "Dunkerque",
+        "Grenoble", "Guingamp", "Lavallois", "Metz", "Montpellier",
+        "Nancy", "Nantes", "Pau", "Red Star", "Reims",
+        "Rodez", "St Etienne", "Sochaux"
+    ],
 }
 
 # --- PREMIUM GÖRSEL ARAYÜZ TASARIMI (CSS) ---
@@ -110,48 +177,43 @@ st.markdown("""
     [data-testid="stSidebar"] { background-color: #0d1324; border-right: 1px solid #1e293b; padding-top: 20px; }
     .premium-card { background: linear-gradient(135deg, #111c34 0%, #080f20 100%); padding: 24px; border-radius: 16px; border: 1px solid #1e293b; margin-bottom: 20px; }
     .skor-box { background: linear-gradient(90deg, #1e1b4b 0%, #311042 100%); border: 2px dashed #8b5cf6; padding: 15px; border-radius: 12px; text-align: center; font-size: 26px; font-weight: bold; color: #f8fafc; margin: 15px 0; letter-spacing: 1px; }
-    
     .signal-green { color: #10b981; font-weight: bold; }
     .signal-red { color: #ef4444; font-weight: bold; }
     .badge { background: linear-gradient(90deg, #4c1d95 0%, #2563eb 100%); color: #ffffff; padding: 6px 16px; border-radius: 9999px; font-size: 13px; font-weight: bold; display: inline-block; margin-bottom: 12px; border: 1px solid #3b82f6; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3); }
     .yorum-box { background-color: #0b1329; border-left: 4px solid #8b5cf6; padding: 18px; border-radius: 8px; font-size: 15px; color: #e2e8f0; line-height: 1.6; margin-top: 15px; }
+    
+    /* YENİ KUPON KART TASARIMLARI */
+    .k-card { border-radius: 12px; padding: 16px; margin-bottom: 16px; background-color: #0f172a; border: 1px solid #334155; position: relative; overflow: hidden; }
+    .k-tuttu { border-left: 6px solid #10b981; }
+    .k-yatti { border-left: 6px solid #ef4444; }
+    .k-bekliyor { border-left: 6px solid #f59e0b; }
+    .m-satir { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1e293b; font-size: 14px; }
+    .m-satir:last-child { border-bottom: none; }
     </style>
 """, unsafe_allow_html=True)
 
 sekme1, sekme2, sekme3 = st.tabs(["📊 Analiz Ekranı", "🗂️ Arşiv Paneli", "🎟️ Kupon Odası"])
 
-# --- SIDEBAR (KULLANICI DOSTU GELİŞMİŞ PANEL) ---
+# --- SIDEBAR (AYNEN KORUNDU) ---
 st.sidebar.markdown("<h2 style='text-align: center; color: #8b5cf6; margin-bottom: 20px;'>📋 VERİ SEVİYESİ</h2>", unsafe_allow_html=True)
-
 st.sidebar.markdown("### 🏟️ Müsabaka Seçim Odası")
 
-# 1. Lig Seçimi
 lig_listesi = list(LIG_VERITABANI.keys()) + ["🌍 Diğer / Listede Olmayan Lig"]
 secilen_lig = st.sidebar.selectbox("Ligi Seç kanka:", lig_listesi)
 
-# 2. Ev Sahibi Alanı
 if secilen_lig == "🌍 Diğer / Listede Olmayan Lig":
     ev_sahibi = st.sidebar.text_input("Ev Sahibi Takım Adı:", "Ev Sahibi")
 else:
     ev_secenekleri = ["✍️ Kendim Yazacağım..."] + LIG_VERITABANI[secilen_lig]
     ev_secim = st.sidebar.selectbox("Ev Sahibi Takım:", ev_secenekleri, index=1)
-    
-    if ev_secim == "✍️ Kendim Yazacağım...":
-        ev_sahibi = st.sidebar.text_input("Ev Sahibi Takım Adını Gir kanka:", "Ev Sahibi")
-    else:
-        ev_sahibi = ev_secim
+    ev_sahibi = st.sidebar.text_input("Ev Sahibi Takım Adını Gir kanka:", "Ev Sahibi") if ev_secim == "✍️ Kendim Yazacağım..." else ev_secim
 
-# 3. Deplasman Alanı
 if secilen_lig == "🌍 Diğer / Listede Olmayan Lig":
     deplasman = st.sidebar.text_input("Deplasman Takım Adı:", "Deplasman")
 else:
     dep_secenekleri = ["✍️ Kendim Yazacağım..."] + LIG_VERITABANI[secilen_lig]
     dep_secim = st.sidebar.selectbox("Deplasman Takımı:", dep_secenekleri, index=2)
-    
-    if dep_secim == "✍️ Kendim Yazacağım...":
-        deplasman = st.sidebar.text_input("Deplasman Takım Adını Gir kanka:", "Deplasman")
-    else:
-        deplasman = dep_secim
+    deplasman = st.sidebar.text_input("Deplasman Takım Adını Gir kanka:", "Deplasman") if dep_secim == "✍️ Kendim Yazacağım..." else dep_secim
 
 st.sidebar.write("---")
 st.sidebar.markdown("### 🌍 Lig Karakteristiği")
@@ -173,7 +235,6 @@ ev_cs = st.sidebar.slider("Ev Sahibi Son 5 Maçta Gol Yemediği Maç Sayısı", 
 ev_onem = st.sidebar.slider("Ev Sahibinin Maç Önem Derecesi (1-5)", 1, 5, 5)
 
 st.sidebar.write("---")
-
 st.sidebar.markdown("### 🚀 Deplasman İstatistikleri")
 dep_dis_mac = st.sidebar.number_input("Dış Sahada Oynadığı Maç", min_value=1, value=15)
 dep_dis_puan = st.sidebar.number_input("Dış Sahada Topladığı Puan", min_value=0, value=28)
@@ -186,7 +247,6 @@ dep_onem = st.sidebar.slider("Deplasmanın Maç Önem Derecesi (1-5)", 1, 5, 4)
 
 st.sidebar.markdown("### 🏆 Genel Lig İstatistikleri")
 col_genel1, col_genel2 = st.sidebar.columns(2)
-
 with col_genel1:
     st.markdown("**Ev Sahibi (Genel)**")
     ev_genel_mac = st.number_input("Toplam Maç (Ev)", min_value=1, value=20, step=1)
@@ -271,10 +331,8 @@ dep_xg = ((dep_dis_xg * 0.5) + (dep_genel_xg * 0.5)) * (2.0 - puan_denge_carpan)
 ev_xg = max(ev_xg, 0.05)
 dep_xg = max(dep_xg, 0.05)
 
-# Simülasyon Hesaplamaları
 ms1_olasilik, x_olasilik, ms2_olasilik = mac_simule_et(ev_xg, dep_xg)
 
-# En Olası Matris Skor Projeksiyonu (Düzeltme: Limit 6'dan 10'a çıkarıldı)
 en_yuksek_skor_p, tahmin_ev_skor, tahmin_dep_skor = 0, 0, 0
 for i in range(10):
     for j in range(10):
@@ -282,7 +340,6 @@ for i in range(10):
         if p > en_yuksek_skor_p:
             en_yuksek_skor_p, tahmin_ev_skor, tahmin_dep_skor = p, i, j
 
-# Gelişmiş Alt/Üst ve KG Var Dağılım Hesaplama
 ust_olasilik, kg_var_olasilik = 0.0, 0.0
 for i in range(11):
     for j in range(11):
@@ -292,100 +349,18 @@ for i in range(11):
 ust_olasilik *= 100
 kg_var_olasilik *= 100
 
-# Hassas Değer (Value) Filtrelemesi
 v_ms1 = ms1_olasilik - (100 / b_ms1)
 v_x = x_olasilik - (100 / b_x)
 v_ms2 = ms2_olasilik - (100 / b_ms2)
 
-# --- 🎙️ VERİ TABANLI DETAYLI TEKNİK ANALİZ ÖZETİ ---
-yorum_cumleleri = []
 
-# 1. xG Yapay Zekâ Güç Dengesi Analizi
-yorum_cumleleri.append(
-    f"Lig genelindeki {lig_ort_gol:.2f} gol ortalaması parametre alınarak kurgulanan dinamik xG matrisinde; "
-    f"{ev_sahibi} ekibinin teorik gol üretkenlik endeksi {ev_xg:.2f}, {deplasman} ekibinin ise {dep_xg:.2f} "
-    f"seviyesinde ölçülmüştür. Bu durum, {ev_sahibi if ev_xg > dep_xg else deplasman} takımının hücum varyasyonlarında "
-    f"matematiksel olarak daha efektif bir oyun sergileyebileceğine işaret etmektedir."
-)
-
-# 2. Kadro Derinliği ve Eksik Oyuncu Etki Korelasyonu
-if (ev_kritik_eksik + ev_normal_eksik) > (dep_kritik_eksik + dep_normal_eksik):
-    yorum_cumleleri.append(
-        f"Ev sahibi ekipte saptanan {ev_kritik_eksik} kritik ve {ev_normal_eksik} rotasyonel eksiklik, "
-        f"takımın ideal taktiksel esnekliğini ve saha içi senkronizasyonunu kısıtlama potansiyeline sahip. "
-        f"Sistem bu eksikliklerin yaratabileceği zafiyeti ev sahibi xG çıktısında negatif yönde revize etmiştir."
-    )
-elif (dep_kritik_eksik + dep_normal_eksik) > (ev_kritik_eksik + ev_normal_eksik):
-    yorum_cumleleri.append(
-        f"Deplasman kadrosundaki {dep_kritik_eksik} kritik ve {dep_normal_eksik} tamamlayıcı oyuncu noksanlığı, "
-        f"özellikle dış saha direnci ve geçiş savunması metriklerini olumsuz etkilemektedir. Algoritma, bu kadro "
-        f"yıpranmasını deplasmanın direnç katsayısında kırılma olarak hesaplamıştır."
-    )
-else:
-    yorum_cumleleri.append(
-        "Her iki takımın eksik oyuncu yükleri ve kadro stabilizasyonları dengeli bir dağılım göstermekte, "
-        "müsabakanın taktiksel derinliğinde kadro kaynaklı ekstra bir anomalilik öngörülmemektedir."
-    )
-
-# 3. Gol ve Tempo Eğilim Analizi
-if ust_olasilik >= 58:
-    yorum_cumleleri.append(
-        f"Genişletilmiş Poisson havuzunda %{ust_olasilik:.1f} olasılıkla baskın bir 2.5 Üst trendi yakalanmıştır. "
-        f"Takımların hücum performans katsayılarının lig ortalamasının üzerinde kalması, geçiş hücumlarının "
-        f"yoğun yaşanacağı, yüksek tempolu ve bol pozisyonlu bir 90 dakikayı rasyonel kılmaktadır."
-    )
-elif ust_olasilik <= 42:
-    yorum_cumleleri.append(
-        f"Matematiksel modelleme, %{100-ust_olasilik:.1f} ihtimalle savunma katsayılarının hücum hatlarına ağır "
-        f"basacağı, düşük tempolu ve kilitli bir oyun yapısına işaret ediyor. Takımların defansif reaksiyonları, "
-        f"skorun kontrollü bir düzlemde kalma olasılığını ciddi oranda artırmaktadır."
-    )
-else:
-    yorum_cumleleri.append(
-        f"Müsabakanın toplam gol eğilimi %{ust_olasilik:.1f} ihtimalle 2.5 Üst baremine yakınsasa da, orta tempolu "
-        f"ve dengeli bir stratejik paylaşıma daha yatkın durmaktadır. İlk golün zamanlaması oyunun karakteristiğini "
-        f"doğrudan belirleyecektir."
-    )
-
-# 4. Karşılıklı Gol (KG) ve Defansif Sürdürülebilirlik Analizi
-if kg_var_olasilik >= 58:
-    yorum_cumleleri.append(
-        f"Karşılıklı Gol Var (KG Var) ihtimalinin %{kg_var_olasilik:.1f} seviyesinde seyretmesi, iki takımın da "
-        f"üçüncü bölgedeki bitiricilik kalitesini doğrular niteliktedir. Defansif zaafiyetler ve hücum iştahı, "
-        f"skor tabelasının çift taraflı değişme olasılığını maksimuma yaklaştırıyor."
-    )
-elif kg_var_olasilik <= 42:
-    yorum_cumleleri.append(
-        f"Model, %{100-kg_var_olasilik:.1f} gibi yüksek bir oranda takımlardan en az birinin gol yollarında "
-        f"tıkanabileceğini veya katı bir savunma bloğu kuracağını öngörüyor. Clean Sheet (Gol yememe) eğilimleri "
-        f"bu müsabakada ana belirleyici faktör olabilir."
-    )
-
-# 5. Value (Değer) ve Bahis Stratejisi Korelasyonu
-en_yuksek_v = max(v_ms1, v_x, v_ms2)
-if en_yuksek_v > 0:
-    hedef_pazar = "MS 1" if en_yuksek_v == v_ms1 else ("Beraberlik (X)" if en_yuksek_v == v_x else "MS 2")
-    yorum_cumleleri.append(
-        f"Bülten oranları ile yapay zekâ olasılık matrisi karşılaştırıldığında; piyasa fiyatlamasındaki en net sapma "
-        f"ve matematiksel değer (Value: {en_yuksek_v:+.2f}) **{hedef_pazar}** pazarında tespit edilmiştir. "
-        f"Uzun vadeli karlılık projeksiyonunda bu tip oran anomalilerine yönelmek kasa yönetimini optimize edecektir."
-    )
-else:
-    yorum_cumleleri.append(
-        "Mevcut bülten oranları ile modelin olasılık çıktıları arasında piyasayı manipüle edecek düzeyde radikal "
-        "bir 'Value' farkı saptanmamıştır. Oranlar risk dağılımıyla büyük ölçüde örtüşmektedir."
-    )
-
-nihai_yorum = " ".join(yorum_cumleleri)
-
-# --- KULLANICI DOSTU ANA PANEL ---
+# --- SEKME 1: ANALİZ EKRANI ---
 with sekme1:
-    st.markdown('<div class="badge">SEZGİN GÖRMÜŞ VERİ ANALİZİ </div>', unsafe_allow_html=True)
+    st.markdown('<div class="badge">SEZGİN GÖRMÜŞ VERİ ANALİZİ</div>', unsafe_allow_html=True)
     st.title("📊 Sezgin Görmüş Matematiksel Tahmin Robotu")
     st.write(f"Sistem stabilizasyonu tamamlandı. Profesyonel Ev xG: **{ev_xg:.2f}** | Profesyonel Deplasman xG: **{dep_xg:.2f}**")
     
     col_sol, col_sag = st.columns([11, 10])
-    
     with col_sol:
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
         st.subheader("🎯 Profesyonel Olasılık Dağılımı")
@@ -397,7 +372,6 @@ with sekme1:
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
         st.subheader("⚽ Maç Öngörüsü")
         st.markdown(f'<div class="skor-box">🤖 EN YÜKSEK OLASILIKLI SKOR: {tahmin_ev_skor} - {tahmin_dep_skor}</div>', unsafe_allow_html=True)
-        
         c1, c2 = st.columns(2)
         with c1: st.metric(label="📈 2.5 Üst İhtimali", value=f"%{ust_olasilik:.1f}"); st.progress(int(ust_olasilik))
         with c2: st.metric(label="🔥 Karşılıklı Gol Var İhtimali", value=f"%{kg_var_olasilik:.1f}"); st.progress(int(kg_var_olasilik))
@@ -421,7 +395,6 @@ with sekme1:
         
         en_iyi_bahis = "RİSKLİ MÜSABAKA (PAS) ⚠️"
         pazar_t = "Yok"
-        
         if v_ms1 > 0 and ms1_olasilik >= 48: en_iyi_bahis, pazar_t = f"Maç Sonucu 1 ({ev_sahibi})", "Maç Sonucu"
         elif v_ms2 > 0 and ms2_olasilik >= 48: en_iyi_bahis, pazar_t = f"Maç Sonucu 2 ({deplasman})", "Maç Sonucu"
         elif v_x > 0 and x_olasilik >= 32: en_iyi_bahis, pazar_t = "Beraberlik (X)", "Maç Sonucu"
@@ -432,10 +405,6 @@ with sekme1:
         
         st.markdown(f'<div style="color:#f59e0b; font-weight:bold; font-size:17px; margin-bottom: 10px;">🎯 STRATEJİK SEÇİM: {en_iyi_bahis}</div>', unsafe_allow_html=True)
         
-        st.markdown("##### 🎙️ Veri Mühendisliği Taktik Analizi")
-        st.markdown(f'<div class="yorum-box">{nihai_yorum}</div>', unsafe_allow_html=True)
-        st.write("")
-        
         if st.button("💾 Kusursuz Analizi Arşive Kaydet"):
             df_logs = pd.read_csv(DB_FILE)
             yeni = {
@@ -444,78 +413,62 @@ with sekme1:
                 "Model_Ust": round(ust_olasilik,1), "Model_KGVar": round(kg_var_olasilik,1),
                 "Onerilen_Bahis": en_iyi_bahis, "Pazar_Tipi": pazar_t, "Sonuc": "Bekliyor"
             }
-            # Pandas warning giderme (Düzeltildi)
             df_logs = pd.concat([df_logs, pd.DataFrame([yeni])], ignore_index=True)
             df_logs.to_csv(DB_FILE, index=False)
             st.success("Kusursuz veri analizi arşive mühürlendi kanka!")
         st.markdown('</div>', unsafe_allow_html=True)
 
+
 # --- SEKME 2: ARŞİV PANELİ ---
 with sekme2:
-    st.markdown('<div class="badge">SEZGİN GÖRMÜŞ ANALİZ MERKEZİ v7.0</div>', unsafe_allow_html=True)
-    st.title("🗂️ Profesyonel Analiz Arşivi & Performans Takip Laboratuvarı")
+    st.markdown('<div class="badge">SEZGİN GÖRMÜŞ ANALİZ MERKEZİ v8.0</div>', unsafe_allow_html=True)
+    st.title("🗂️ Profesyonel Analiz Arşivi")
     
     df_logs = pd.read_csv(DB_FILE)
     
     if len(df_logs) == 0:
-        st.info("Arşiv veritabanı henüz boş kanka. İlk analizini kaydedince burası şenlenecek!")
+        st.info("Arşiv veritabanı boş kanka. Önce maç analiz etmelisin!")
     else:
-        toplam_mac = len(df_logs)
-        # Hatalı satır temizlendi (Düzeltildi)
         kazananlar = len(df_logs[df_logs["Sonuc"] == "KAZANDI ✅"])
         kaybedenler = len(df_logs[df_logs["Sonuc"] == "KAYBETTİ ❌"])
         bekleyenler = len(df_logs[df_logs["Sonuc"] == "Bekliyor"])
-        
-        sonuclanmis = kazananlar + kaybedenler
-        basari_orani = (kazananlar / sonuclanmis * 100) if sonuclanmis > 0 else 0.0
+        basari_orani = (kazananlar / (kazananlar + kaybedenler) * 100) if (kazananlar + kaybedenler) > 0 else 0.0
         
         m_col1, m_col2, m_col3, m_col4 = st.columns(4)
-        with m_col1: st.metric(label="📊 Toplam Analiz Edilen Müsabaka", value=toplam_mac)
-        with m_col2: st.metric(label="🔥 Model Başarı Endeksi", value=f"%{basari_orani:.1f}")
-        with m_col3: st.metric(label="⏳ Sonuç Bekleyen Tahminler", value=bekleyenler)
-        with m_col4: st.metric(label="🎯 İsabetli / Yatan Müsabaka", value=f"{kazananlar} / {kaybedenler}")
+        with m_col1: st.metric(label="📊 Toplam Maç", value=len(df_logs))
+        with m_col2: st.metric(label="🔥 Başarı Oranı", value=f"%{basari_orani:.1f}")
+        with m_col3: st.metric(label="⏳ Bekleyenler", value=bekleyenler)
+        with m_col4: st.metric(label="🎯 Tutan / Yatan", value=f"{kazananlar} / {kaybedenler}")
             
         st.write("---")
-        st.markdown("### 🔍 Akıllı Filtreleme ve Arama")
-        f_c1, f_c2 = st.columns([2, 1])
-        with f_c1:
-            arama_terimi = st.text_input("Takım Adına Göre Arşivde Ara...", "").lower()
-        with f_c2:
-            durum_filtresi = st.selectbox("Duruma Göre Süz", ["Hepsi", "KAZANDI ✅", "KAYBETTİ ❌", "Bekliyor"])
-            
         df_goster = df_logs.copy()
-        if arama_terimi:
-            df_goster = df_goster[df_goster["Ev Sahibi"].str.lower().str.contains(arama_terimi) | df_goster["Deplasman"].str.lower().str.contains(arama_terimi)]
-        if durum_filtresi != "Hepsi":
-            df_goster = df_goster[df_goster["Sonuc"] == durum_filtresi]
-            
         st.dataframe(df_goster, use_container_width=True)
 
-        # --- ARŞİV GÜNCELLEME VE SİLME ODASI ---
-        st.markdown("### ⚙️ Maç Durumu Güncelleme ve Yönetim")
+        st.markdown("### ⚙️ Maç Durumu Güncelleme")
         if len(df_goster) > 0:
-            seçilen_index = st.selectbox("Durumunu Güncellemek İstediğin Maçın Satır Numarası (Index):", df_goster.index)
+            seçilen_index = st.selectbox("Durumunu Güncellemek İstediğin Maçın Numarası (Index):", df_goster.index)
             yeni_durum = st.selectbox("Yeni Sonuç Değeri:", ["Bekliyor", "KAZANDI ✅", "KAYBETTİ ❌"])
             
             c_g1, c_g2 = st.columns(2)
             with c_g1:
-                if st.button("🔄 Durumu Güncelle"):
+                if st.button("🔄 Durumu Güncelle ve Kuponlara İşle"):
                     df_logs.at[seçilen_index, "Sonuc"] = yeni_durum
                     df_logs.to_csv(DB_FILE, index=False)
-                    st.success("Maç sonucu başarıyla güncellendi kanka!")
+                    kuponlari_otomatik_guncelle() # OTOMATİK KUPON KONTROLÜ
+                    st.success("Maç sonucu güncellendi! Bekleyen kuponlar otomatik denetlendi kanka.")
                     st.rerun()
             with c_g2:
-                if st.button("🗑️ Bu Analizi Veritabanından Sil"):
+                if st.button("🗑️ Analizi Sil"):
                     df_logs = df_logs.drop(seçilen_index).reset_index(drop=True)
                     df_logs.to_csv(DB_FILE, index=False)
-                    st.warning("Analiz kaydı arşivden tamamen silindi!")
+                    st.warning("Analiz kaydı silindi!")
                     st.rerun()
 
-# --- SEKME 3: KUPON ODASI ---
+
+# --- SEKME 3: DİJİTAL KUPON ODASI ---
 with sekme3:
-    st.markdown('<div class="badge">🎟️ KUPON YÖNETİM MERKEZİ v7.0</div>', unsafe_allow_html=True)
-    st.title("🎟️ Kupon Odası & Kasa Takip Laboratuvarı")
-    st.write("Mühürlenen maç analizlerinizle oluşturduğunuz kuponları buraya kaydederek kasa yönetiminizi profesyonelce takip edin.")
+    st.markdown('<div class="badge">🎟️ OTOMATİK KUPON MERKEZİ v8.0</div>', unsafe_allow_html=True)
+    st.title("🎟️ Akıllı Kupon Odası & Kasa")
     
     df_kuponlar = pd.read_csv(KUPON_DB_FILE)
     df_logs = pd.read_csv(DB_FILE)
@@ -527,75 +480,119 @@ with sekme3:
         st.subheader("➕ Yeni Kupon Mühürle")
         
         if len(df_logs) == 0:
-            st.warning("Kupona maç ekleyebilmek için önce Analiz Ekranından maç kaydedip arşive eklemelisin kanka.")
+            st.warning("Önce analiz kaydedip arşive maç eklemelisin kanka.")
         else:
-            # DuplicateWidgetID hatasını önlemek için Index ile birleştiriyoruz (Düzeltildi)
             mac_secenekleri = df_logs.index.astype(str) + " - " + df_logs["Ev Sahibi"] + " vs " + df_logs["Deplasman"] + " (" + df_logs["Onerilen_Bahis"] + ")"
-            secilen_maclar = st.multiselect("Kupona Dahil Edilecek Maçları Seç kanka:", mac_secenekleri)
+            secilen_maclar = st.multiselect("Kupona Eklenecek Maçlar:", mac_secenekleri)
             
             yatirilan_para = st.number_input("Yatırılan Tutar (TL):", min_value=10, value=100, step=10)
-            kupon_durumu = st.selectbox("Kupon Güncel Durumu:", ["Bekliyor", "TUTTU 🎉", "YATTI ❌"])
             
-            if st.button("🎟️ Kuponu Veritabanına İşle"):
+            if st.button("🎟️ Kuponu Sisteme Göm"):
                 if len(secilen_maclar) == 0:
                     st.error("En az 1 maç seçmelisin kanka!")
                 else:
-                    df_kp = pd.read_csv(KUPON_DB_FILE)
-                    yeni_id = f"KPN-{len(df_kp) + 1001}"
+                    secilen_idler = [m.split(" - ")[0] for m in secilen_maclar]
+                    mac_idler_str = ",".join(secilen_idler)
                     
-                    # Kullanıcı arayüzü için index numarasını metinden temizleyelim
-                    temiz_maclar = [m.split(" - ", 1)[1] for m in secilen_maclar]
-                    maclar_str = " | ".join(temiz_maclar)
-                    
+                    yeni_id = f"KPN-{len(df_kuponlar) + 1001}"
                     yeni_kupon = {
                         "Kupon_ID": yeni_id,
-                        "Mac_Detaylari": maclar_str,
+                        "Mac_IDleri": mac_idler_str,
                         "Yatirilan_Tutar": yatirilan_para,
-                        "Durum": kupon_durumu,
+                        "Durum": "Bekliyor",
                         "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M")
                     }
-                    df_kp = pd.concat([df_kp, pd.DataFrame([yeni_kupon])], ignore_index=True)
-                    df_kp.to_csv(KUPON_DB_FILE, index=False)
-                    st.success(f"{yeni_id} Kimlikli Kupon Kasaya Mühürlendi!")
+                    df_kuponlar = pd.concat([df_kuponlar, pd.DataFrame([yeni_kupon])], ignore_index=True)
+                    df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
+                    kuponlari_otomatik_guncelle() # Ekler eklemez kontrol et
+                    st.success(f"{yeni_id} Kasaya Mühürlendi!")
                     st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
     with k_col2:
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-        st.subheader("📊 Canlı Kupon Durum Analizi")
-        if len(df_kuponlar) == 0:
-            st.info("Henüz kasaya mühürlenmiş kupon bulunmuyor kanka.")
-        else:
-            toplam_k = len(df_kuponlar)
+        st.subheader("📊 Kasa Analizi")
+        if len(df_kuponlar) > 0:
             tutan_k = len(df_kuponlar[df_kuponlar["Durum"] == "TUTTU 🎉"])
             yatan_k = len(df_kuponlar[df_kuponlar["Durum"] == "YATTI ❌"])
             toplam_yatirilan = df_kuponlar["Yatirilan_Tutar"].sum()
             
-            st.write(f"📊 Toplam Alınan Kupon: **{toplam_k}**")
-            st.write(f"💰 Toplam Yatırılan Finans: **{toplam_yatirilan} TL**")
-            st.write(f"✅ Tutan: **{tutan_k}** | ❌ Yatan: **{yatan_k}**")
+            st.metric(label="💰 Toplam Yatırılan Bakiye", value=f"{toplam_yatirilan} TL")
+            c_k1, c_k2 = st.columns(2)
+            c_k1.metric(label="✅ Tutan Kupon", value=tutan_k)
+            c_k2.metric(label="❌ Yatan Kupon", value=yatan_k)
+        else:
+            st.info("Henüz mühürlenmiş kupon yok.")
         st.markdown('</div>', unsafe_allow_html=True)
         
     st.write("---")
-    st.markdown("### 📋 Mevcut Kupon Listesi")
+    st.markdown("### 📋 Aktif Dijital Kupon Fişleri")
+    
     if len(df_kuponlar) > 0:
-        st.dataframe(df_kuponlar, use_container_width=True)
+        # KUPONLARI KART OLARAK ÇİZME ALANI
+        satir_sayisi = 0
+        kolonlar = st.columns(2)
         
-        st.markdown("#### ⚙️ Kupon Durumu Revize Odası")
-        k_secilen_id = st.selectbox("Durumunu Değiştirmek İstediğin Kuponun ID'si:", df_kuponlar["Kupon_ID"].values)
-        k_yeni_durum = st.selectbox("Yeni Kupon Durumu Seç:", ["Bekliyor", "TUTTU 🎉", "YATTI ❌"])
-        
-        ck_g1, ck_g2 = st.columns(2)
-        with ck_g1:
-            if st.button("🔄 Kupon Durumunu Güncelle"):
-                idx = df_kuponlar[df_kuponlar["Kupon_ID"] == k_secilen_id].index[0]
-                df_kuponlar.at[idx, "Durum"] = k_yeni_durum
-                df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
-                st.success("Kupon durumu güncellendi!")
-                st.rerun()
-        with ck_g2:
-            if st.button("🗑️ Bu Kuponu Kasadan Sil"):
-                df_kuponlar = df_kuponlar[df_kuponlar["Kupon_ID"] != k_secilen_id].reset_index(drop=True)
-                df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
-                st.warning("Kupon sistemden imha edildi!")
-                st.rerun()
+        for idx, row in df_kuponlar.iloc[::-1].iterrows(): # Sondan başa doğru diz
+            c = kolonlar[satir_sayisi % 2]
+            satir_sayisi += 1
+            
+            durum_sinifi = "k-bekliyor"
+            renk = "#f59e0b"
+            if row["Durum"] == "TUTTU 🎉": 
+                durum_sinifi = "k-tuttu"
+                renk = "#10b981"
+            elif row["Durum"] == "YATTI ❌": 
+                durum_sinifi = "k-yatti"
+                renk = "#ef4444"
+                
+            with c:
+                st.markdown(f'<div class="k-card {durum_sinifi}">', unsafe_allow_html=True)
+                st.markdown(f'<div style="display:flex; justify-content:space-between; margin-bottom:10px;">'
+                            f'<span style="font-weight:bold; font-size:16px;">{row["Kupon_ID"]}</span>'
+                            f'<span style="color:{renk}; font-weight:bold;">{row["Durum"]}</span></div>'
+                            f'<div style="font-size:12px; color:#94a3b8; margin-bottom:15px;">Yatırılan Tutar: {row["Yatirilan_Tutar"]} TL</div>', 
+                            unsafe_allow_html=True)
+                
+                # Kupon içindeki maçları tarama
+                if pd.notna(row["Mac_IDleri"]):
+                    idler = str(row["Mac_IDleri"]).split(",")
+                    toplam_mac = len(idler)
+                    tutan_mac = 0
+                    
+                    for mid in idler:
+                        try:
+                            m_idx = int(mid)
+                            if m_idx in df_logs.index:
+                                m_isim = f"{df_logs.at[m_idx, 'Ev Sahibi']} - {df_logs.at[m_idx, 'Deplasman']}"
+                                m_bahis = df_logs.at[m_idx, 'Onerilen_Bahis']
+                                m_sonuc = df_logs.at[m_idx, 'Sonuc']
+                                
+                                m_renk = "#e2e8f0"
+                                ikon = "⏳"
+                                if m_sonuc == "KAZANDI ✅": 
+                                    m_renk = "#10b981"; ikon = "✅"; tutan_mac += 1
+                                elif m_sonuc == "KAYBETTİ ❌": 
+                                    m_renk = "#ef4444"; ikon = "❌"
+                                
+                                st.markdown(f'<div class="m-satir">'
+                                            f'<span>{m_isim} <br> <span style="font-size:11px; color:#94a3b8;">Tahmin: {m_bahis}</span></span>'
+                                            f'<span style="color:{m_renk}; font-weight:bold;">{ikon}</span>'
+                                            f'</div>', unsafe_allow_html=True)
+                            else:
+                                st.markdown('<div class="m-satir"><span>(Silinmiş Maç Kaydı)</span></div>', unsafe_allow_html=True)
+                        except:
+                            pass
+                    
+                    # Progress bar
+                    yuzde = int((tutan_mac / toplam_mac) * 100) if toplam_mac > 0 else 0
+                    st.write("")
+                    st.progress(yuzde, text=f"Tutan Maç: {tutan_mac} / {toplam_mac}")
+                
+                # SİLME BUTONU
+                if st.button(f"🗑️ {row['Kupon_ID']} Sil", key=f"sil_{row['Kupon_ID']}"):
+                    df_kuponlar = df_kuponlar.drop(idx).reset_index(drop=True)
+                    df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
+                    st.rerun()
+                    
+                st.markdown('</div>', unsafe_allow_html=True)
