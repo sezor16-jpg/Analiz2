@@ -466,133 +466,87 @@ with sekme2:
 
 
 # --- SEKME 3: DİJİTAL KUPON ODASI ---
+st.markdown("""
+<style>
+    .kupon-container { background: #1e293b; padding: 20px; border-radius: 15px; color: white; border: 1px solid #334155; }
+    .kupon-mac-kart { background: #334155; padding: 10px; margin-bottom: 8px; border-radius: 8px; border-left: 4px solid #3b82f6; }
+    .k-tuttu { border-left: 4px solid #10b981 !important; }
+    .k-yatti { border-left: 4px solid #ef4444 !important; }
+    .oran-badge { float: right; font-weight: bold; color: #fbbf24; }
+</style>
+""", unsafe_allow_html=True)
 with sekme3:
-    st.markdown('<div class="badge">🎟️ OTOMATİK KUPON MERKEZİ v8.0</div>', unsafe_allow_html=True)
     st.title("🎟️ Akıllı Kupon Odası & Kasa")
     
+    # Verileri okuma (Senin mevcut kodun)
     df_kuponlar = pd.read_csv(KUPON_DB_FILE)
     df_logs = pd.read_csv(DB_FILE)
+    
+    # FİLTRELEME: Arşivdeki maçları multiselect'ten temizler
+    aktif_maclar = df_logs[df_logs["Sonuc"].isna() | (df_logs["Sonuc"] == "⏳")]
     
     k_col1, k_col2 = st.columns([1, 1])
     
     with k_col1:
-        st.markdown('<div class="premium-card">', unsafe_allow_html=True)
         st.subheader("➕ Yeni Kupon Mühürle")
-        
-        if len(df_logs) == 0:
-            st.warning("Önce analiz kaydedip arşive maç eklemelisin kanka.")
+        if len(aktif_maclar) == 0:
+            st.warning("Oynanacak aktif maç kalmadı kanka.")
         else:
-            mac_secenekleri = df_logs.index.astype(str) + " - " + df_logs["Ev Sahibi"] + " vs " + df_logs["Deplasman"] + " (" + df_logs["Onerilen_Bahis"] + ")"
+            mac_secenekleri = aktif_maclar.index.astype(str) + " - " + aktif_maclar["Ev Sahibi"] + " vs " + aktif_maclar["Deplasman"] + " (" + aktif_maclar["Onerilen_Bahis"] + ")"
             secilen_maclar = st.multiselect("Kupona Eklenecek Maçlar:", mac_secenekleri)
-            
             yatirilan_para = st.number_input("Yatırılan Tutar (TL):", min_value=10, value=100, step=10)
             
             if st.button("🎟️ Kuponu Sisteme Göm"):
-                if len(secilen_maclar) == 0:
-                    st.error("En az 1 maç seçmelisin kanka!")
+                if not secilen_maclar:
+                    st.error("En az 1 maç seçmelisin!")
                 else:
                     secilen_idler = [m.split(" - ")[0] for m in secilen_maclar]
-                    mac_idler_str = ",".join(secilen_idler)
-                    
-                    yeni_id = f"KPN-{len(df_kuponlar) + 1001}"
                     yeni_kupon = {
-                        "Kupon_ID": yeni_id,
-                        "Mac_IDleri": mac_idler_str,
+                        "Kupon_ID": f"KPN-{len(df_kuponlar) + 1001}",
+                        "Mac_IDleri": ",".join(secilen_idler),
                         "Yatirilan_Tutar": yatirilan_para,
                         "Durum": "Bekliyor",
                         "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M")
                     }
                     df_kuponlar = pd.concat([df_kuponlar, pd.DataFrame([yeni_kupon])], ignore_index=True)
                     df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
-                    kuponlari_otomatik_guncelle() # Ekler eklemez kontrol et
-                    st.success(f"{yeni_id} Kasaya Mühürlendi!")
+                    st.success("Mühürlendi!")
                     st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
     with k_col2:
-        st.markdown('<div class="premium-card">', unsafe_allow_html=True)
         st.subheader("📊 Kasa Analizi")
         if len(df_kuponlar) > 0:
             tutan_k = len(df_kuponlar[df_kuponlar["Durum"] == "TUTTU 🎉"])
             yatan_k = len(df_kuponlar[df_kuponlar["Durum"] == "YATTI ❌"])
-            toplam_yatirilan = df_kuponlar["Yatirilan_Tutar"].sum()
-            
-            st.metric(label="💰 Toplam Yatırılan Bakiye", value=f"{toplam_yatirilan} TL")
+            st.metric(label="💰 Toplam Yatırılan", value=f"{df_kuponlar['Yatirilan_Tutar'].sum()} TL")
             c_k1, c_k2 = st.columns(2)
-            c_k1.metric(label="✅ Tutan Kupon", value=tutan_k)
-            c_k2.metric(label="❌ Yatan Kupon", value=yatan_k)
-        else:
-            st.info("Henüz mühürlenmiş kupon yok.")
-        st.markdown('</div>', unsafe_allow_html=True)
-        
+            c_k1.metric("✅ Tutan", tutan_k)
+            c_k2.metric("❌ Yatan", yatan_k)
+
     st.write("---")
     st.markdown("### 📋 Aktif Dijital Kupon Fişleri")
     
-    if len(df_kuponlar) > 0:
-        # KUPONLARI KART OLARAK ÇİZME ALANI
-        satir_sayisi = 0
-        kolonlar = st.columns(2)
+    # Kupon Kartlarını Çizme
+    for idx, row in df_kuponlar.iloc[::-1].iterrows():
+        renk_class = "k-tuttu" if row["Durum"] == "TUTTU 🎉" else ("k-yatti" if row["Durum"] == "YATTI ❌" else "")
         
-        for idx, row in df_kuponlar.iloc[::-1].iterrows(): # Sondan başa doğru diz
-            c = kolonlar[satir_sayisi % 2]
-            satir_sayisi += 1
+        with st.container():
+            st.markdown(f'<div class="kupon-container {renk_class}">', unsafe_allow_html=True)
+            st.markdown(f"**{row['Kupon_ID']}** | {row['Tarih']} | **{row['Durum']}**")
             
-            durum_sinifi = "k-bekliyor"
-            renk = "#f59e0b"
-            if row["Durum"] == "TUTTU 🎉": 
-                durum_sinifi = "k-tuttu"
-                renk = "#10b981"
-            elif row["Durum"] == "YATTI ❌": 
-                durum_sinifi = "k-yatti"
-                renk = "#ef4444"
-                
-            with c:
-                st.markdown(f'<div class="k-card {durum_sinifi}">', unsafe_allow_html=True)
-                st.markdown(f'<div style="display:flex; justify-content:space-between; margin-bottom:10px;">'
-                            f'<span style="font-weight:bold; font-size:16px;">{row["Kupon_ID"]}</span>'
-                            f'<span style="color:{renk}; font-weight:bold;">{row["Durum"]}</span></div>'
-                            f'<div style="font-size:12px; color:#94a3b8; margin-bottom:15px;">Yatırılan Tutar: {row["Yatirilan_Tutar"]} TL</div>', 
-                            unsafe_allow_html=True)
-                
-                # Kupon içindeki maçları tarama
-                if pd.notna(row["Mac_IDleri"]):
-                    idler = str(row["Mac_IDleri"]).split(",")
-                    toplam_mac = len(idler)
-                    tutan_mac = 0
-                    
-                    for mid in idler:
-                        try:
-                            m_idx = int(mid)
-                            if m_idx in df_logs.index:
-                                m_isim = f"{df_logs.at[m_idx, 'Ev Sahibi']} - {df_logs.at[m_idx, 'Deplasman']}"
-                                m_bahis = df_logs.at[m_idx, 'Onerilen_Bahis']
-                                m_sonuc = df_logs.at[m_idx, 'Sonuc']
-                                
-                                m_renk = "#e2e8f0"
-                                ikon = "⏳"
-                                if m_sonuc == "KAZANDI ✅": 
-                                    m_renk = "#10b981"; ikon = "✅"; tutan_mac += 1
-                                elif m_sonuc == "KAYBETTİ ❌": 
-                                    m_renk = "#ef4444"; ikon = "❌"
-                                
-                                st.markdown(f'<div class="m-satir">'
-                                            f'<span>{m_isim} <br> <span style="font-size:11px; color:#94a3b8;">Tahmin: {m_bahis}</span></span>'
-                                            f'<span style="color:{m_renk}; font-weight:bold;">{ikon}</span>'
-                                            f'</div>', unsafe_allow_html=True)
-                            else:
-                                st.markdown('<div class="m-satir"><span>(Silinmiş Maç Kaydı)</span></div>', unsafe_allow_html=True)
-                        except:
-                            pass
-                    
-                    # Progress bar
-                    yuzde = int((tutan_mac / toplam_mac) * 100) if toplam_mac > 0 else 0
-                    st.write("")
-                    st.progress(yuzde, text=f"Tutan Maç: {tutan_mac} / {toplam_mac}")
-                
-                # SİLME BUTONU
-                if st.button(f"🗑️ {row['Kupon_ID']} Sil", key=f"sil_{row['Kupon_ID']}"):
-                    df_kuponlar = df_kuponlar.drop(idx).reset_index(drop=True)
-                    df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
-                    st.rerun()
-                    
-                st.markdown('</div>', unsafe_allow_html=True)
+            # Maçları kartların içine listele
+            idler = str(row["Mac_IDleri"]).split(",")
+            for mid in idler:
+                try:
+                    m_idx = int(mid)
+                    if m_idx in df_logs.index:
+                        m = df_logs.loc[m_idx]
+                        st.markdown(f'''<div class="kupon-mac-kart">{m['Ev Sahibi']} vs {m['Deplasman']} <span class="oran-badge">{m['Onerilen_Bahis']}</span></div>''', unsafe_allow_html=True)
+                except: continue
+            
+            # Silme butonu (Senin orijinal kodun)
+            if st.button(f"🗑️ {row['Kupon_ID']} Sil", key=f"sil_{row['Kupon_ID']}"):
+                df_kuponlar = df_kuponlar.drop(idx).reset_index(drop=True)
+                df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
+                st.rerun()
+            st.markdown('</div><br>', unsafe_allow_html=True)
