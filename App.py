@@ -465,28 +465,30 @@ with sekme2:
                     st.rerun()
 
 
-# --- SEKME 3: DİJİTAL KUPON ODASI ---
+# --- PREMIUM KUPON TASARIMLARI (Güncellendi) ---
 st.markdown("""
-<style>
-    .kupon-container { background: #1e293b; padding: 20px; border-radius: 15px; color: white; border: 1px solid #334155; }
-    .kupon-mac-kart { background: #334155; padding: 10px; margin-bottom: 8px; border-radius: 8px; border-left: 4px solid #3b82f6; }
-    .k-tuttu { border-left: 4px solid #10b981 !important; }
-    .k-yatti { border-left: 4px solid #ef4444 !important; }
-    .oran-badge { float: right; font-weight: bold; color: #fbbf24; }
-</style>
+    <style>
+    .k-ana-kart { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 20px; border-radius: 16px; border: 1px solid #334155; margin-bottom: 20px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); }
+    .k-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 15px; }
+    .k-durum-badge { padding: 4px 12px; border-radius: 9999px; font-weight: bold; font-size: 12px; }
+    .k-tuttu { border-left: 6px solid #10b981; }
+    .k-yatti { border-left: 6px solid #ef4444; }
+    .k-bekliyor { border-left: 6px solid #f59e0b; }
+    .mac-satiri { background: #070a13; padding: 12px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #1e293b; }
+    .mac-ismi { font-weight: 600; color: #f8fafc; }
+    .mac-oran { background: #1e293b; color: #fbbf24; padding: 4px 8px; border-radius: 6px; font-size: 13px; font-weight: bold; }
+    </style>
 """, unsafe_allow_html=True)
+
+# --- SEKME 3: DİJİTAL KUPON ODASI ---
 with sekme3:
     st.title("🎟️ Akıllı Kupon Odası & Kasa")
     
-    # Verileri okuma (Senin mevcut kodun)
     df_kuponlar = pd.read_csv(KUPON_DB_FILE)
     df_logs = pd.read_csv(DB_FILE)
-    
-    # FİLTRELEME: Arşivdeki maçları multiselect'ten temizler
-    aktif_maclar = df_logs[df_logs["Sonuc"].isna() | (df_logs["Sonuc"] == "⏳")]
+    aktif_maclar = df_logs[df_logs["Sonuc"].isna() | (df_logs["Sonuc"] == "Bekliyor")]
     
     k_col1, k_col2 = st.columns([1, 1])
-    
     with k_col1:
         st.subheader("➕ Yeni Kupon Mühürle")
         if len(aktif_maclar) == 0:
@@ -495,22 +497,13 @@ with sekme3:
             mac_secenekleri = aktif_maclar.index.astype(str) + " - " + aktif_maclar["Ev Sahibi"] + " vs " + aktif_maclar["Deplasman"] + " (" + aktif_maclar["Onerilen_Bahis"] + ")"
             secilen_maclar = st.multiselect("Kupona Eklenecek Maçlar:", mac_secenekleri)
             yatirilan_para = st.number_input("Yatırılan Tutar (TL):", min_value=10, value=100, step=10)
-            
             if st.button("🎟️ Kuponu Sisteme Göm"):
-                if not secilen_maclar:
-                    st.error("En az 1 maç seçmelisin!")
+                if not secilen_maclar: st.error("En az 1 maç seçmelisin!")
                 else:
                     secilen_idler = [m.split(" - ")[0] for m in secilen_maclar]
-                    yeni_kupon = {
-                        "Kupon_ID": f"KPN-{len(df_kuponlar) + 1001}",
-                        "Mac_IDleri": ",".join(secilen_idler),
-                        "Yatirilan_Tutar": yatirilan_para,
-                        "Durum": "Bekliyor",
-                        "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M")
-                    }
+                    yeni_kupon = {"Kupon_ID": f"KPN-{len(df_kuponlar) + 1001}", "Mac_IDleri": ",".join(secilen_idler), "Yatirilan_Tutar": yatirilan_para, "Durum": "Bekliyor", "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M")}
                     df_kuponlar = pd.concat([df_kuponlar, pd.DataFrame([yeni_kupon])], ignore_index=True)
                     df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
-                    st.success("Mühürlendi!")
                     st.rerun()
 
     with k_col2:
@@ -524,29 +517,32 @@ with sekme3:
             c_k2.metric("❌ Yatan", yatan_k)
 
     st.write("---")
-    st.markdown("### 📋 Aktif Dijital Kupon Fişleri")
+    st.subheader("📋 Aktif Dijital Kupon Fişleri")
     
-    # Kupon Kartlarını Çizme
     for idx, row in df_kuponlar.iloc[::-1].iterrows():
-        renk_class = "k-tuttu" if row["Durum"] == "TUTTU 🎉" else ("k-yatti" if row["Durum"] == "YATTI ❌" else "")
+        # Duruma göre stil belirleme
+        durum_class = "k-tuttu" if row["Durum"] == "TUTTU 🎉" else ("k-yatti" if row["Durum"] == "YATTI ❌" else "k-bekliyor")
         
-        with st.container():
-            st.markdown(f'<div class="kupon-container {renk_class}">', unsafe_allow_html=True)
-            st.markdown(f"**{row['Kupon_ID']}** | {row['Tarih']} | **{row['Durum']}**")
+        st.markdown(f'<div class="k-ana-kart {durum_class}">', unsafe_allow_html=True)
+        st.markdown(f'''<div class="k-header">
+            <div><b style="color:#8b5cf6;">{row['Kupon_ID']}</b> | <small>{row['Tarih']}</small></div>
+            <div class="k-durum-badge">{row['Durum']}</div>
+        </div>''', unsafe_allow_html=True)
+        
+        idler = str(row["Mac_IDleri"]).split(",")
+        for mid in idler:
+            try:
+                m_idx = int(mid)
+                if m_idx in df_logs.index:
+                    m = df_logs.loc[m_idx]
+                    st.markdown(f'''<div class="mac-satiri">
+                        <span class="mac-ismi">{m['Ev Sahibi']} vs {m['Deplasman']}</span>
+                        <span class="mac-oran">{m['Onerilen_Bahis']}</span>
+                    </div>''', unsafe_allow_html=True)
+            except: continue
             
-            # Maçları kartların içine listele
-            idler = str(row["Mac_IDleri"]).split(",")
-            for mid in idler:
-                try:
-                    m_idx = int(mid)
-                    if m_idx in df_logs.index:
-                        m = df_logs.loc[m_idx]
-                        st.markdown(f'''<div class="kupon-mac-kart">{m['Ev Sahibi']} vs {m['Deplasman']} <span class="oran-badge">{m['Onerilen_Bahis']}</span></div>''', unsafe_allow_html=True)
-                except: continue
-            
-            # Silme butonu (Senin orijinal kodun)
-            if st.button(f"🗑️ {row['Kupon_ID']} Sil", key=f"sil_{row['Kupon_ID']}"):
-                df_kuponlar = df_kuponlar.drop(idx).reset_index(drop=True)
-                df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
-                st.rerun()
-            st.markdown('</div><br>', unsafe_allow_html=True)
+        if st.button(f"🗑️ {row['Kupon_ID']} Kaydını Sil", key=f"sil_{row['Kupon_ID']}"):
+            df_kuponlar = df_kuponlar.drop(idx).reset_index(drop=True)
+            df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
