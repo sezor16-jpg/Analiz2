@@ -572,5 +572,3 @@ with sekme3:
                         df_kuponlar = df_kuponlar.drop(idx).reset_index(drop=True)
                         df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
                         st.rerun()
-                    
-                st.markdown('</div>', unsafe_allow_html=True) # K-CARD KAPANIŞI
