@@ -187,7 +187,7 @@ st.markdown("""
     .k-tuttu { background: #10b981; }
     .k-yatti { background: #ef4444; }
     .k-bekliyor { background: #f59e0b; }
-    .m-satir { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1e293b; font-size: 14px; }
+    .m-satir { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1e293b; font-size: 16px; }
     .m-satir:last-child { border-bottom: none; }
     </style>
 """, unsafe_allow_html=True)
@@ -542,20 +542,20 @@ with sekme3:
             satir_sayisi += 1
             
             durum_sinifi = "k-bekliyor"
-            renk = "#fff"
+            renk = "#ffffff"
             if row["Durum"] == "TUTTU 🎉": 
                 durum_sinifi = "k-tuttu"
-                renk = "#fff"
+                renk = "#ffffff"
             elif row["Durum"] == "YATTI ❌": 
                 durum_sinifi = "k-yatti"
-                renk = "#fff"            
+                renk = "#ffffff"            
             with c:
                 st.markdown(f'''
                     <div class="k-card {durum_sinifi}" style="padding: 15px; margin-bottom: 15px; border-radius: 8px;">
                         <div style="margin-bottom:10px;">
                             <div style="font-weight:bold; font-size:16px;">{row["Kupon_ID"]}</div>
                             <div style="color:{renk}; font-weight:bold;">{row["Durum"]}</div>
-                            <div style="font-size:12px; color:#94a3b8; margin-bottom:15px;">Yatırılan Tutar: {row["Yatirilan_Tutar"]} TL</div>
+                            <div style="font-size:14px; color:#ffffff; margin-bottom:15px;">Yatırılan Tutar: {row["Yatirilan_Tutar"]} TL</div>
                         </div>
                 ''', unsafe_allow_html=True)
                 
