@@ -541,49 +541,36 @@ with sekme3:
             c = kolonlar[satir_sayisi % 2]
             satir_sayisi += 1
             
-            durum_sinifi = "k-bekliyor"
-            renk = "#ffffff"
-            if row["Durum"] == "TUTTU 🎉": 
-                durum_sinifi = "k-tuttu"
-                renk = "#ffffff"
-            elif row["Durum"] == "YATTI ❌": 
-                durum_sinifi = "k-yatti"
-                renk = "#ffffff"            
+            # Kart renklerini belirle
+            renk = "#1e293b" # Default (Bekliyor)
+            if row["Durum"] == "TUTTU 🎉": renk = "#064e3b"
+            elif row["Durum"] == "YATTI ❌": renk = "#7f1d1d"
+
             with c:
-                # 1. KARTIN BAŞINI AÇIYORUZ
-                st.markdown(f'''
-                    <div class="k-card {durum_sinifi}" style="padding: 15px; margin-bottom: 20px; border-radius: 12px; border: 1px solid #334155;">
-                        <div style="border-bottom: 1px solid rgba(255,255,255,0.2); margin-bottom:10px; padding-bottom:10px;">
-                            <div style="font-weight:bold; font-size:18px;">{row["Kupon_ID"]}</div>
-                            <div style="font-weight:bold; font-size:16px;">{row["Durum"]}</div>
-                            <div style="font-size:14px; opacity:0.9;">Yatırılan Tutar: {row["Yatirilan_Tutar"]} TL</div>
-                        </div>
-                ''', unsafe_allow_html=True)
-                
-                # 2. MAÇ LİSTESİNİ KARTIN İÇİNE DÖKÜYORUZ
-                if pd.notna(row["Mac_IDleri"]):
-                    idler = str(row["Mac_IDleri"]).split(",")
-                    for mid in idler:
-                        try:
-                            m_idx = int(mid)
-                            if m_idx in df_logs.index:
-                                m_isim = f"{df_logs.at[m_idx, 'Ev Sahibi']} - {df_logs.at[m_idx, 'Deplasman']}"
-                                m_sonuc = df_logs.at[m_idx, 'Sonuc']
-                                ikon = "⏳"
-                                if m_sonuc == "KAZANDI ✅": ikon = "✅"
-                                elif m_sonuc == "KAYBETTİ ❌": ikon = "❌"
-                                
-                                st.markdown(f'''
-                                    <div style="display:flex; justify-content:space-between; padding:4px 0; font-size:14px;">
-                                        <span>{m_isim}</span><span>{ikon}</span>
-                                    </div>
-                                ''', unsafe_allow_html=True)
-                        except: pass
-                
-                # 3. SİLME BUTONUNU KARTIN ALTINA EKLE VE KARTI KAPAT
-                if st.button(f"🗑️ {row['Kupon_ID']} Sil", key=f"sil_{row['Kupon_ID']}"):
-                    df_kuponlar = df_kuponlar.drop(idx).reset_index(drop=True)
-                    df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
-                    st.rerun()
+                # Kapsayıcı container ile çerçeveyi oluşturuyoruz
+                with st.container(border=True):
+                    # Kart başlığı
+                    st.markdown(f"### {row['Kupon_ID']}")
+                    st.write(f"**Durum:** {row['Durum']}")
+                    st.write(f"**Yatırılan:** {row['Yatirilan_Tutar']} TL")
+                    st.divider()
+                    
+                    # Maç listesi
+                    if pd.notna(row["Mac_IDleri"]):
+                        idler = str(row["Mac_IDleri"]).split(",")
+                        for mid in idler:
+                            try:
+                                m_idx = int(mid)
+                                if m_idx in df_logs.index:
+                                    m_isim = f"{df_logs.at[m_idx, 'Ev Sahibi']} - {df_logs.at[m_idx, 'Deplasman']}"
+                                    m_sonuc = df_logs.at[m_idx, 'Sonuc']
+                                    st.text(f"• {m_isim} ({m_sonuc})")
+                            except: pass
+                    
+                    # Silme butonu
+                    if st.button(f"🗑️ {row['Kupon_ID']} Sil", key=f"sil_{row['Kupon_ID']}"):
+                        df_kuponlar = df_kuponlar.drop(idx).reset_index(drop=True)
+                        df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
+                        st.rerun()
                     
                 st.markdown('</div>', unsafe_allow_html=True) # K-CARD KAPANIŞI
