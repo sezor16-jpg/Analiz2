@@ -274,10 +274,10 @@ dep_xg = max(dep_xg, 0.05)
 # Simülasyon Hesaplamaları
 ms1_olasilik, x_olasilik, ms2_olasilik = mac_simule_et(ev_xg, dep_xg)
 
-# En Olası Matris Skor Projeksiyonu
+# En Olası Matris Skor Projeksiyonu (Düzeltme: Limit 6'dan 10'a çıkarıldı)
 en_yuksek_skor_p, tahmin_ev_skor, tahmin_dep_skor = 0, 0, 0
-for i in range(6):
-    for j in range(6):
+for i in range(10):
+    for j in range(10):
         p = poisson_olasilik(i, ev_xg) * poisson_olasilik(j, dep_xg)
         if p > en_yuksek_skor_p:
             en_yuksek_skor_p, tahmin_ev_skor, tahmin_dep_skor = p, i, j
@@ -444,6 +444,7 @@ with sekme1:
                 "Model_Ust": round(ust_olasilik,1), "Model_KGVar": round(kg_var_olasilik,1),
                 "Onerilen_Bahis": en_iyi_bahis, "Pazar_Tipi": pazar_t, "Sonuc": "Bekliyor"
             }
+            # Pandas warning giderme (Düzeltildi)
             df_logs = pd.concat([df_logs, pd.DataFrame([yeni])], ignore_index=True)
             df_logs.to_csv(DB_FILE, index=False)
             st.success("Kusursuz veri analizi arşive mühürlendi kanka!")
@@ -460,7 +461,7 @@ with sekme2:
         st.info("Arşiv veritabanı henüz boş kanka. İlk analizini kaydedince burası şenlenecek!")
     else:
         toplam_mac = len(df_logs)
-        kazananlar = len(df_logs[df_logs["Sonuc"] == "KAZANDI ✅"].shape[0]) if "KAZANDI ✅" in df_logs["Sonuc"].values else 0
+        # Hatalı satır temizlendi (Düzeltildi)
         kazananlar = len(df_logs[df_logs["Sonuc"] == "KAZANDI ✅"])
         kaybedenler = len(df_logs[df_logs["Sonuc"] == "KAYBETTİ ❌"])
         bekleyenler = len(df_logs[df_logs["Sonuc"] == "Bekliyor"])
@@ -528,8 +529,8 @@ with sekme3:
         if len(df_logs) == 0:
             st.warning("Kupona maç ekleyebilmek için önce Analiz Ekranından maç kaydedip arşive eklemelisin kanka.")
         else:
-            # Aktif veya bekleyen maç listesinden seçim yaptırıyoruz
-            mac_secenekleri = df_logs["Ev Sahibi"] + " vs " + df_logs["Deplasman"] + " (" + df_logs["Onerilen_Bahis"] + ")"
+            # DuplicateWidgetID hatasını önlemek için Index ile birleştiriyoruz (Düzeltildi)
+            mac_secenekleri = df_logs.index.astype(str) + " - " + df_logs["Ev Sahibi"] + " vs " + df_logs["Deplasman"] + " (" + df_logs["Onerilen_Bahis"] + ")"
             secilen_maclar = st.multiselect("Kupona Dahil Edilecek Maçları Seç kanka:", mac_secenekleri)
             
             yatirilan_para = st.number_input("Yatırılan Tutar (TL):", min_value=10, value=100, step=10)
@@ -541,7 +542,10 @@ with sekme3:
                 else:
                     df_kp = pd.read_csv(KUPON_DB_FILE)
                     yeni_id = f"KPN-{len(df_kp) + 1001}"
-                    maclar_str = " | ".join(secilen_maclar)
+                    
+                    # Kullanıcı arayüzü için index numarasını metinden temizleyelim
+                    temiz_maclar = [m.split(" - ", 1)[1] for m in secilen_maclar]
+                    maclar_str = " | ".join(temiz_maclar)
                     
                     yeni_kupon = {
                         "Kupon_ID": yeni_id,
