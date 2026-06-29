@@ -473,16 +473,21 @@ with sekme3:
     df_kuponlar = pd.read_csv(KUPON_DB_FILE)
     df_logs = pd.read_csv(DB_FILE)
     
+    # --- KRİTİK FİLTRELEME ---
+    # Sadece 'Sonuc' sütunu 'Bekliyor' olan maçları filtrele
+    aktif_maclar = df_logs[df_logs["Sonuc"] == "Bekliyor"]
+    
     k_col1, k_col2 = st.columns([1, 1])
     
     with k_col1:
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
         st.subheader("➕ Yeni Kupon Mühürle")
         
-        if len(df_logs) == 0:
-            st.warning("Önce analiz kaydedip arşive maç eklemelisin kanka.")
+        if len(aktif_maclar) == 0:
+            st.warning("Şu an analiz edilmiş ve sonucu belli olmayan (Bekleyen) maç yok kanka.")
         else:
-            mac_secenekleri = df_logs.index.astype(str) + " - " + df_logs["Ev Sahibi"] + " vs " + df_logs["Deplasman"] + " (" + df_logs["Onerilen_Bahis"] + ")"
+            # Filtrelenmiş aktif_maclar üzerinden seçim listesi oluşturduk
+            mac_secenekleri = aktif_maclar.index.astype(str) + " - " + aktif_maclar["Ev Sahibi"] + " vs " + aktif_maclar["Deplasman"] + " (" + aktif_maclar["Onerilen_Bahis"] + ")"
             secilen_maclar = st.multiselect("Kupona Eklenecek Maçlar:", mac_secenekleri)
             
             yatirilan_para = st.number_input("Yatırılan Tutar (TL):", min_value=10, value=100, step=10)
@@ -504,11 +509,11 @@ with sekme3:
                     }
                     df_kuponlar = pd.concat([df_kuponlar, pd.DataFrame([yeni_kupon])], ignore_index=True)
                     df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
-                    kuponlari_otomatik_guncelle() # Ekler eklemez kontrol et
+                    kuponlari_otomatik_guncelle()
                     st.success(f"{yeni_id} Kasaya Mühürlendi!")
                     st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
-
+        
     with k_col2:
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
         st.subheader("📊 Kasa Analizi")
