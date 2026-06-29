@@ -549,15 +549,17 @@ with sekme3:
             elif row["Durum"] == "YATTI ❌": 
                 durum_sinifi = "k-yatti"
                 renk = "#ef4444"
-                
+            
             with c:
-                st.markdown(f'<div class="k-card {durum_sinifi}" style="display: flex; flex-direction: column; min-height: 200px;">', unsafe_allow_html=True)
-                
-                st.markdown(f'<div style="margin-bottom:10px;">'
-                            f'<div style="font-weight:bold; font-size:16px;">{row["Kupon_ID"]}</div>'
-                            f'<div style="color:{renk}; font-weight:bold;">{row["Durum"]}</div>'
-                            f'<div style="font-size:12px; color:#94a3b8; margin-bottom:15px;">Yatırılan Tutar: {row["Yatirilan_Tutar"]} TL</div>'
-                            f'</div>', unsafe_allow_html=True)
+                # Dışarıdaki boş div'i sildim. İçeriği tek bir HTML bloku içinde topladım.
+                st.markdown(f'''
+                    <div class="k-card {durum_sinifi}" style="padding: 15px; margin-bottom: 15px; border-radius: 8px;">
+                        <div style="margin-bottom:10px;">
+                            <div style="font-weight:bold; font-size:16px;">{row["Kupon_ID"]}</div>
+                            <div style="color:{renk}; font-weight:bold;">{row["Durum"]}</div>
+                            <div style="font-size:12px; color:#94a3b8; margin-bottom:15px;">Yatırılan Tutar: {row["Yatirilan_Tutar"]} TL</div>
+                        </div>
+                ''', unsafe_allow_html=True)
                 
                 if pd.notna(row["Mac_IDleri"]):
                     idler = str(row["Mac_IDleri"]).split(",")
@@ -572,11 +574,14 @@ with sekme3:
                                 if m_sonuc == "KAZANDI ✅": m_renk = "#10b981"; ikon = "✅"
                                 elif m_sonuc == "KAYBETTİ ❌": m_renk = "#ef4444"; ikon = "❌"
                                 
-                                st.markdown(f'<div class="m-satir" style="display:flex; justify-content:space-between; margin-bottom:5px;">'
-                                            f'<span>{m_isim}</span><span style="color:{m_renk}; font-weight:bold;">{ikon}</span>'
-                                            f'</div>', unsafe_allow_html=True)
+                                st.markdown(f'''
+                                    <div class="m-satir" style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                                        <span>{m_isim}</span><span style="color:{m_renk}; font-weight:bold;">{ikon}</span>
+                                    </div>
+                                ''', unsafe_allow_html=True)
                         except: pass
                 
+                # Div'i kapatmadan butonu Streamlit ile değil, yine aynı div'in içine yerleştiriyoruz
                 if st.button(f"🗑️ {row['Kupon_ID']} Sil", key=f"sil_{row['Kupon_ID']}"):
                     df_kuponlar = df_kuponlar.drop(idx).reset_index(drop=True)
                     df_kuponlar.to_csv(KUPON_DB_FILE, index=False)
