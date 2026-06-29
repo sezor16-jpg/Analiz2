@@ -184,9 +184,9 @@ st.markdown("""
     
     /* YENİ KUPON KART TASARIMLARI */
     .k-card { border-radius: 12px; padding: 16px; margin-bottom: 16px; background-color: #0f172a; border: 1px solid #334155; position: relative; overflow: hidden; }
-    .k-tuttu { border-left: 6px solid #10b981; }
-    .k-yatti { border-left: 6px solid #ef4444; }
-    .k-bekliyor { border-left: 6px solid #f59e0b; }
+    .k-tuttu { background: 6px solid #10b981; }
+    .k-yatti { background: 6px solid #ef4444; }
+    .k-bekliyor { background: 6px solid #f59e0b; }
     .m-satir { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1e293b; font-size: 14px; }
     .m-satir:last-child { border-bottom: none; }
     </style>
@@ -542,16 +542,14 @@ with sekme3:
             satir_sayisi += 1
             
             durum_sinifi = "k-bekliyor"
-            renk = "#f59e0b"
+            renk = "#fff"
             if row["Durum"] == "TUTTU 🎉": 
                 durum_sinifi = "k-tuttu"
-                renk = "#10b981"
+                renk = "#fff"
             elif row["Durum"] == "YATTI ❌": 
                 durum_sinifi = "k-yatti"
-                renk = "#ef4444"
-            
+                renk = "#fff"            
             with c:
-                # Dışarıdaki boş div'i sildim. İçeriği tek bir HTML bloku içinde topladım.
                 st.markdown(f'''
                     <div class="k-card {durum_sinifi}" style="padding: 15px; margin-bottom: 15px; border-radius: 8px;">
                         <div style="margin-bottom:10px;">
