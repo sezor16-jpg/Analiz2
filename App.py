@@ -184,9 +184,9 @@ st.markdown("""
     
     /* YENİ KUPON KART TASARIMLARI */
     .k-card { border-radius: 12px; padding: 16px; margin-bottom: 16px; background-color: #0f172a; border: 1px solid #334155; position: relative; overflow: hidden; }
-    .k-tuttu { background: 6px solid #10b981; }
-    .k-yatti { background: 6px solid #ef4444; }
-    .k-bekliyor { background: 6px solid #f59e0b; }
+    .k-tuttu { background: #10b981; }
+    .k-yatti { background: #ef4444; }
+    .k-bekliyor { background: #f59e0b; }
     .m-satir { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1e293b; font-size: 14px; }
     .m-satir:last-child { border-bottom: none; }
     </style>
