@@ -475,9 +475,9 @@ with sekme1:
             if "1.5" in grafik_tipi: vals = [gol_ust_1_5, gol_alt_1_5]
             elif "2.5" in grafik_tipi: vals = [gol_ust_2_5, gol_alt_2_5]
             else: vals = [gol_ust_3_5, gol_alt_3_5]
-            fig = go.Figure(data=[go.Pie(labels=['Üst', 'Alt'], values=vals, hole=.4, marker_colors=['#0acc31', '#d11515'])])
+            fig = go.Figure(data=[go.Pie(labels=['Üst', 'Alt'], values=vals, hole=.4, marker_colors=['#0acc31', '#f53333'])])
         else:
-            fig = go.Figure(data=[go.Pie(labels=['KG Var', 'KG Yok'], values=[kg_var_olasilik, 100-kg_var_olasilik], hole=.4, marker_colors=['#0acc31', '#d11515'])])
+            fig = go.Figure(data=[go.Pie(labels=['KG Var', 'KG Yok'], values=[kg_var_olasilik, 100-kg_var_olasilik], hole=.4, marker_colors=['#0acc31', '#f53333'])])
 
         fig.update_layout(template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=350, margin=dict(t=30, b=30, l=30, r=30), showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5,uirevision='constant'))
         
