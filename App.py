@@ -406,12 +406,7 @@ with sekme1:
         
         st.plotly_chart(fig, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
-    
-    # use_container_width=True komutu zaten genişliği otomatik ayarlar
-    st.plotly_chart(fig, use_container_width=True)
-    st.plotly_chart(fig, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
+   
     with col_sag:
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
         st.subheader("🚨 Sinyal Odası (Value Oran Filtresi)")
