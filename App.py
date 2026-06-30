@@ -479,7 +479,7 @@ with sekme1:
         else:
             fig = go.Figure(data=[go.Pie(labels=['KG Var', 'KG Yok'], values=[kg_var_olasilik, 100-kg_var_olasilik], hole=.4, marker_colors=['#0acc31', '#d11515'])])
 
-        fig.update_layout(template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=350, margin=dict(t=30, b=30, l=30, r=30), showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5))
+        fig.update_layout(template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=350, margin=dict(t=30, b=30, l=30, r=30), showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5,uirevision='constant'))
         
         # KEY parametresi eklendi
         st.plotly_chart(fig, use_container_width=True, key=f"grafik_{grafik_tipi}")
