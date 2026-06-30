@@ -389,9 +389,9 @@ with sekme1:
             if "1.5" in grafik_tipi: vals = [gol_ust_1_5, gol_alt_1_5]
             elif "2.5" in grafik_tipi: vals = [gol_ust_2_5, gol_alt_2_5]
             else: vals = [gol_ust_3_5, gol_alt_3_5]
-            fig = go.Figure(data=[go.Pie(labels=['Üst', 'Alt'], values=vals, hole=.4, marker_colors=['#8b5cf6', '#f59e0b'])])
+            fig = go.Figure(data=[go.Pie(labels=['Üst', 'Alt'], values=vals, hole=.4, marker_colors=['#0ea600', '#a60000'])])
         else:
-            fig = go.Figure(data=[go.Pie(labels=['KG Var', 'KG Yok'], values=[kg_var_olasilik, 100-kg_var_olasilik], hole=.4, marker_colors=['#10b981', '#ef4444'])])
+            fig = go.Figure(data=[go.Pie(labels=['KG Var', 'KG Yok'], values=[kg_var_olasilik, 100-kg_var_olasilik], hole=.4, marker_colors=['#0ea600', '#a60000'])])
 
         # GRAFİK BOYUT AYARLARI
         fig.update_layout(
