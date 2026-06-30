@@ -377,35 +377,35 @@ with sekme1:
     
     col_sol, col_sag = st.columns([11, 10])
     with col_sol:
-    st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-    st.subheader("🎯 Profesyonel Olasılık Dağılımı")
-    
-    # Grafik Seçici
-    grafik_tipi = st.radio("Görünüm:", ["Maç Sonucu", "1.5 Alt/Üst", "2.5 Alt/Üst", "3.5 Alt/Üst", "KG Durumu"], horizontal=True)
-    
-    if grafik_tipi == "Maç Sonucu":
-        fig = go.Figure(data=[go.Pie(labels=['MS1', 'X', 'MS2'], values=[ms1_olasilik, x_olasilik, ms2_olasilik], hole=.4)])
-    elif "Alt/Üst" in grafik_tipi:
-        if "1.5" in grafik_tipi: vals = [gol_ust_1_5, gol_alt_1_5]
-        elif "2.5" in grafik_tipi: vals = [gol_ust_2_5, gol_alt_2_5]
-        else: vals = [gol_ust_3_5, gol_alt_3_5]
-        fig = go.Figure(data=[go.Pie(labels=['Üst', 'Alt'], values=vals, hole=.4, marker_colors=['#8b5cf6', '#f59e0b'])])
-    else:
-        fig = go.Figure(data=[go.Pie(labels=['KG Var', 'KG Yok'], values=[kg_var_olasilik, 100-kg_var_olasilik], hole=.4, marker_colors=['#10b981', '#ef4444'])])
+        st.markdown('<div class="premium-card">', unsafe_allow_html=True)
+        st.subheader("🎯 Profesyonel Olasılık Dağılımı")
+        
+        # Grafik Seçici
+        grafik_tipi = st.radio("Görünüm:", ["Maç Sonucu", "1.5 Alt/Üst", "2.5 Alt/Üst", "3.5 Alt/Üst", "KG Durumu"], horizontal=True)
+        
+        if grafik_tipi == "Maç Sonucu":
+            fig = go.Figure(data=[go.Pie(labels=['MS1', 'X', 'MS2'], values=[ms1_olasilik, x_olasilik, ms2_olasilik], hole=.4)])
+        elif "Alt/Üst" in grafik_tipi:
+            if "1.5" in grafik_tipi: vals = [gol_ust_1_5, gol_alt_1_5]
+            elif "2.5" in grafik_tipi: vals = [gol_ust_2_5, gol_alt_2_5]
+            else: vals = [gol_ust_3_5, gol_alt_3_5]
+            fig = go.Figure(data=[go.Pie(labels=['Üst', 'Alt'], values=vals, hole=.4, marker_colors=['#8b5cf6', '#f59e0b'])])
+        else:
+            fig = go.Figure(data=[go.Pie(labels=['KG Var', 'KG Yok'], values=[kg_var_olasilik, 100-kg_var_olasilik], hole=.4, marker_colors=['#10b981', '#ef4444'])])
 
-    # GRAFİK BOYUT AYARLARI
-    fig.update_layout(
-        template="plotly_dark", 
-        paper_bgcolor='rgba(0,0,0,0)', 
-        plot_bgcolor='rgba(0,0,0,0)',
-        height=400, # Boyutu büyüttük
-        margin=dict(t=30, b=30, l=30, r=30),
-        showlegend=True,
-        legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+        # GRAFİK BOYUT AYARLARI
+        fig.update_layout(
+            template="plotly_dark", 
+            paper_bgcolor='rgba(0,0,0,0)', 
+            plot_bgcolor='rgba(0,0,0,0)',
+            height=400, # Boyutu büyüttük
+            margin=dict(t=30, b=30, l=30, r=30),
+            showlegend=True,
+            legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
     
     # use_container_width=True komutu zaten genişliği otomatik ayarlar
     st.plotly_chart(fig, use_container_width=True)
