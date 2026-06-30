@@ -388,7 +388,18 @@ with sekme1:
         else:
             fig = go.Figure(data=[go.Pie(labels=['KG Var', 'KG Yok'], values=[kg_var_olasilik, 100-kg_var_olasilik], hole=.4, marker_colors=['#10b981', '#ef4444'])])
     
-        fig.update_layout(template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', height=250)
+        fig.update_layout(
+        template="plotly_dark", 
+        paper_bgcolor='rgba(0,0,0,0)', 
+        plot_bgcolor='rgba(0,0,0,0)',
+        height=400,  # Burayı 250'den 400'e çekerek alanı büyüttük
+        margin=dict(t=20, b=20, l=20, r=20), # Kenar boşluklarını sıfıra yakın tut ki grafik yayılsın
+        showlegend=True, # Legend'ı (açıklamaları) göstererek grafiği daha dolu göster
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
+    
+    # use_container_width=True komutu zaten genişliği otomatik ayarlar
+    st.plotly_chart(fig, use_container_width=True)
         st.plotly_chart(fig, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
