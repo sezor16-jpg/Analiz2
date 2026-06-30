@@ -497,27 +497,52 @@ with sekme1:
    
     with col_sag:
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-        st.subheader("🚨 Tahmin Odası")
+        st.subheader("🚨 Tahmin ve Sinyal Odası")
+        
+        # Sinyalleri iyileştiren geliştirilmiş fonksiyon
         def sinyal_satiri(pazar, model_p, oran, value):
             renk = "signal-green" if value > 0 else "signal-red"
-            durum = "🔥" if value > 0 else "❌"
-            st.markdown(f'<div style="padding: 8px 0; border-bottom: 1px solid #1e293b;"><b>{pazar}</b> {durum}<br><small>Değer: <span class="{renk}">{value:+.2f}</span></small></div>', unsafe_allow_html=True)
+            ikon = "✅" if value > 0 else "⚠️"
+            # Görseli güçlendirmek için satırları biraz daha belirgin kıldık
+            st.markdown(f"""
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #1e293b;">
+                <div>
+                    <div style='font-weight: 600; color: #f8fafc;'>{pazar}</div>
+                    <div style="font-size: 12px; color: #94a3b8;">Olasılık: %{model_p:.1f} | Oran: {oran}</div>
+                </div>
+                <div style="text-align: right;">
+                    <div class='{renk}' style="font-size: 18px;">{value:+.2f}</div>
+                    <div style="font-size: 12px; color: #64748b;">{ikon}</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
         
-        sinyal_satiri(f"{ev_sahibi} MS1", ms1_olasilik, b_ms1, v_ms1)
+        # Sinyalleri basıyoruz
+        sinyal_satiri(f"MS 1 ({ev_sahibi})", ms1_olasilik, b_ms1, v_ms1)
         sinyal_satiri("Beraberlik (X)", x_olasilik, b_x, v_x)
-        sinyal_satiri(f"{deplasman} MS2", ms2_olasilik, b_ms2, v_ms2)
-        st.markdown('</div>', unsafe_allow_html=True)
+        sinyal_satiri(f"MS 2 ({deplasman})", ms2_olasilik, b_ms2, v_ms2)
         
-        # STRATEJİ VE KAYIT
-        if st.button("💾 Analizi Arşive Kaydet"):
-            df_logs = pd.read_csv(DB_FILE)
-            yeni = {
-                "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M"), "Ev Sahibi": ev_sahibi, "Deplasman": deplasman, 
-                "Onerilen_Bahis": en_iyi_bahis, "Yorum": kullanici_notu, "Sonuc": "Bekliyor"
-            }
-            df_logs = pd.concat([df_logs, pd.DataFrame([yeni])], ignore_index=True)
-            df_logs.to_csv(DB_FILE, index=False)
-            st.success("Mühürlendi kanka!")
+        st.markdown('</div>', unsafe_allow_html=True) # Sinyal kartı sonu
+        
+        # --- STRATEJİ VE KAYIT ---
+        st.markdown("---")
+        # Butonun daha dikkat çekici olması için kolon yapısı
+        if st.button("💾 Analizi Arşive Mühürle 🎯", use_container_width=True):
+            try:
+                df_logs = pd.read_csv(DB_FILE)
+                yeni = {
+                    "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M"), 
+                    "Ev Sahibi": ev_sahibi, 
+                    "Deplasman": deplasman, 
+                    "Onerilen_Bahis": en_iyi_bahis, 
+                    "Yorum": otomatik_yorum, # Hata düzeldi: kullanici_notu -> otomatik_yorum
+                    "Sonuc": "Bekliyor"
+                }
+                df_logs = pd.concat([df_logs, pd.DataFrame([yeni])], ignore_index=True)
+                df_logs.to_csv(DB_FILE, index=False)
+                st.success("Veri başarıyla arşive işlendi kanka!")
+            except Exception as e:
+                st.error(f"Kayıt hatası: {e}")
 
 
 # --- SEKME 2: ARŞİV PANELİ ---
