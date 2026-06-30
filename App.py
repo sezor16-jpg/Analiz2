@@ -401,13 +401,22 @@ with sekme1:
     st.title("📊 Yapay Zeka Maç Analiz Paneli")
     
     # İstatistik Özet Kartları
-    st.markdown("---")
+    en_iyi_bahis = "RİSKLİ MÜSABAKA (PAS) ⚠️"
+    pazar_t = "Yok"
+    if v_ms1 > 0 and ms1_olasilik >= 48: en_iyi_bahis, pazar_t = f"Maç Sonucu 1 ({ev_sahibi})", "Maç Sonucu"
+    elif v_ms2 > 0 and ms2_olasilik >= 48: en_iyi_bahis, pazar_t = f"Maç Sonucu 2 ({deplasman})", "Maç Sonucu"
+    elif v_x > 0 and x_olasilik >= 32: en_iyi_bahis, pazar_t = "Beraberlik (X)", "Maç Sonucu"
+    elif ust_olasilik >= 60: en_iyi_bahis, pazar_t = "2.5 Üst", "2.5 Alt/Üst"
+    elif ust_olasilik <= 40: en_iyi_bahis, pazar_t = "2.5 Alt", "2.5 Alt/Üst"
+    elif kg_var_olasilik >= 60: en_iyi_bahis, pazar_t = "Karşılıklı Gol Var (KG Var)", "Karşılıklı Gol"
+    elif kg_var_olasilik <= 40: en_iyi_bahis, pazar_t = "Karşılıklı Gol Yok (KG Yok)", "Karşılıklı Gol"
+
+    # 2. Şimdi metric içinde rahatça kullanabilirsin
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("Ev Sahibi xG", f"{ev_xg:.2f}")
     m2.metric("Deplasman xG", f"{dep_xg:.2f}")
     m3.metric("Maç Tahmini", en_iyi_bahis.split(" (")[0])
-    m4.metric("Güven Skoru", "%78") # Örnek sabit değer
-    st.markdown("---")
+    m4.metric("Güven Skoru", "%78")
 
     col_sol, col_sag = st.columns([1, 1])
 
