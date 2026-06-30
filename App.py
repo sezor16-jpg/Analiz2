@@ -425,8 +425,8 @@ st.markdown("""
     }
     
     .badge {
-        background: #f59e0b !important;
-        color: black !important;
+        background: #3D9DF3 !important;
+        color: #fff !important;
         padding: 5px 15px !important;
         border-radius: 20px !important;
         font-weight: bold !important;
@@ -497,7 +497,7 @@ with sekme1:
    
     with col_sag:
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-        st.subheader("🚨 Sinyal Odası")
+        st.subheader("🚨 Tahmin Odası")
         def sinyal_satiri(pazar, model_p, oran, value):
             renk = "signal-green" if value > 0 else "signal-red"
             durum = "🔥" if value > 0 else "❌"
@@ -509,7 +509,7 @@ with sekme1:
         st.markdown('</div>', unsafe_allow_html=True)
         
         # STRATEJİ VE KAYIT
-        if st.button("💾 Analizi ve Yorumu Arşive Kaydet"):
+        if st.button("💾 Analizi Arşive Kaydet"):
             df_logs = pd.read_csv(DB_FILE)
             yeni = {
                 "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M"), "Ev Sahibi": ev_sahibi, "Deplasman": deplasman, 
