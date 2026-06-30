@@ -353,6 +353,18 @@ v_ms1 = ms1_olasilik - (100 / b_ms1)
 v_x = x_olasilik - (100 / b_x)
 v_ms2 = ms2_olasilik - (100 / b_ms2)
 
+# Mevcut hesaplamaların altına ekle
+alt_1_5_olasilik = sum([poisson_olasilik(0, ev_xg+dep_xg)*poisson_olasilik(0, ev_xg+dep_xg) for i in range(2) for j in range(2) if i+j < 1.5]) # Basitleştirilmiş
+# Daha kesin yöntem:
+toplam_gol_dist = [poisson_olasilik(i, ev_xg) * poisson_olasilik(j, dep_xg) for i in range(6) for j in range(6)]
+gol_alt_1_5 = sum([p for i, p in enumerate([poisson_olasilik(i, ev_xg) * poisson_olasilik(j, dep_xg) for i in range(6) for j in range(6) for (ig, jg) in [(i,j)] if ig+jg < 1.5])]) * 100
+gol_ust_1_5 = 100 - gol_alt_1_5
+
+gol_alt_2_5 = sum([p for i in range(6) for j in range(6) if i+j < 2.5 for p in [poisson_olasilik(i, ev_xg) * poisson_olasilik(j, dep_xg)]]) * 100
+gol_ust_2_5 = 100 - gol_alt_2_5
+
+gol_alt_3_5 = sum([p for i in range(6) for j in range(6) if i+j < 3.5 for p in [poisson_olasilik(i, ev_xg) * poisson_olasilik(j, dep_xg)]]) * 100
+gol_ust_3_5 = 100 - gol_alt_3_5
 
 # --- SEKME 1: ANALİZ EKRANI ---
 with sekme1:
@@ -364,17 +376,20 @@ with sekme1:
     with col_sol:
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
         st.subheader("🎯 Profesyonel Olasılık Dağılımı")
-        fig = go.Figure(data=[go.Pie(labels=['Ev Sahibi Galibiyeti (MS1)', 'Beraberlik (X)', 'Deplasman Galibiyeti (MS2)'], values=[ms1_olasilik, x_olasilik, ms2_olasilik], hole=.45, marker_colors=['#0d9488', '#d97706', '#e11d48'])])
-        fig.update_layout(template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', margin=dict(l=10, r=10, t=10, b=10), height=250)
-        st.plotly_chart(fig, use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
         
-        st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-        st.subheader("⚽ Maç Öngörüsü")
-        st.markdown(f'<div class="skor-box">🤖 EN YÜKSEK OLASILIKLI SKOR: {tahmin_ev_skor} - {tahmin_dep_skor}</div>', unsafe_allow_html=True)
-        c1, c2 = st.columns(2)
-        with c1: st.metric(label="📈 2.5 Üst İhtimali", value=f"%{ust_olasilik:.1f}"); st.progress(int(ust_olasilik))
-        with c2: st.metric(label="🔥 Karşılıklı Gol Var İhtimali", value=f"%{kg_var_olasilik:.1f}"); st.progress(int(kg_var_olasilik))
+        # Grafik Seçici
+        grafik_tipi = st.radio("Görünüm:", ["Maç Sonucu", "Alt/Üst Pazar", "KG Durumu"], horizontal=True)
+        
+        if grafik_tipi == "Maç Sonucu":
+            fig = go.Figure(data=[go.Pie(labels=['MS1', 'X', 'MS2'], values=[ms1_olasilik, x_olasilik, ms2_olasilik], hole=.4)])
+        elif grafik_tipi == "Alt/Üst Pazar":
+            # Örnek: 2.5 Alt/Üst gösterimi
+            fig = go.Figure(data=[go.Pie(labels=['2.5 Üst', '2.5 Alt'], values=[gol_ust_2_5, gol_alt_2_5], hole=.4, marker_colors=['#8b5cf6', '#f59e0b'])])
+        else:
+            fig = go.Figure(data=[go.Pie(labels=['KG Var', 'KG Yok'], values=[kg_var_olasilik, 100-kg_var_olasilik], hole=.4, marker_colors=['#10b981', '#ef4444'])])
+    
+        fig.update_layout(template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', height=250)
+        st.plotly_chart(fig, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col_sag:
