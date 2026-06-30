@@ -81,21 +81,43 @@ def mac_simule_et(ev_gol_beklentisi, dep_gol_beklentisi):
 
 
 def ai_yorum_uret(ev_sahibi, deplasman, ev_xg, dep_xg, ms1_olasilik, ms2_olasilik, en_iyi_bahis):
-    if ev_xg > dep_xg + 0.5:
-        durum = f"{ev_sahibi} sahada çok daha baskın bir futbol oynuyor."
-    elif dep_xg > ev_xg + 0.5:
-        durum = f"{deplasman} hücum hattı ev sahibine göre daha tehlikeli görünüyor."
+    # 1. Hücum Analizi Katmanı
+    fark = ev_xg - dep_xg
+    if fark > 0.8:
+        durum = f"{ev_sahibi} hücumda çok agresif ve dominasyonu elinde tutan bir yapıda."
+    elif fark > 0.3:
+        durum = f"{ev_sahibi} oyunu kontrol eden ve skor üretmeye yakın taraf."
+    elif fark < -0.8:
+        durum = f"{deplasman} takımı sahaya çok daha net ve tehlikeli ayaklarla çıkıyor."
+    elif fark < -0.3:
+        durum = f"{deplasman} oyunu kendi lehine çevirebilecek potansiyele sahip."
     else:
-        durum = "İki takımın da hücum gücü birbirine yakın, kafa kafaya bir maç bizi bekliyor."
-    
-    if "MS" in en_iyi_bahis:
-        tahmin_yorum = "Modelimiz bu mücadelede taraf bahsini güvenli buluyor."
+        durum = "İki takım da birbirine karşı üstünlük kurmakta zorlanacak, tam bir satranç maçı."
+
+    # 2. Olasılık Şiddeti Katmanı
+    en_yuksek = max(ms1_olasilik, ms2_olasilik)
+    if en_yuksek > 65:
+        guven_seviyesi = "Modelimizin bu sonuca olan güveni oldukça yüksek."
+    elif en_yuksek > 50:
+        guven_seviyesi = "Veriler, sonucun bu yönde evrilme ihtimalini güçlü kılıyor."
+    else:
+        guven_seviyesi = "Maçın sonucu kağıt üzerinde oldukça yakın görünüyor, dikkatli olunmalı."
+
+    # 3. Bahis Tipi Katmanı
+    if "MS1" in en_iyi_bahis:
+        bahis_yorum = "Ev sahibi avantajı ve güncel form durumu bu tercihi mantıklı kılıyor."
+    elif "MS2" in en_iyi_bahis:
+        bahis_yorum = "Deplasman ekibinin kontra atak verimliliği bu seçimi öne çıkarıyor."
     elif "Üst" in en_iyi_bahis:
-        tahmin_yorum = "Beklentimiz, iki takımın da gol yollarındaki etkinliğiyle yüksek tempolu bir oyun."
+        bahis_yorum = "Savunma disiplinlerinden ziyade, skor odaklı bir mücadele beklentisi var."
+    elif "Alt" in en_iyi_bahis:
+        bahis_yorum = "Kilitli kalması muhtemel ve taktiksel disiplinin ön planda olduğu bir senaryo."
+    elif "KG" in en_iyi_bahis:
+        bahis_yorum = "İki ekibin de savunma zafiyetleri göz önüne alındığında gol yollarının açık olması muhtemel."
     else:
-        tahmin_yorum = "Stratejik olarak dengeli bir müsabaka öngörüyoruz."
-        
-    return f"ANALİZ RAPORU: {durum} {tahmin_yorum} ({en_iyi_bahis} önerisi öne çıkıyor.)"
+        bahis_yorum = "Sistemimiz bu markette bir değer (value) tespit etti."
+
+    return f"🤖 {durum} {guven_seviyesi} {bahis_yorum} ({en_iyi_bahis} seçimi verilerle destekleniyor.)"
 # 1. BÜYÜK LİG VE TAKIM VERİTABANI
 LIG_VERITABANI = {
     "Türkiye Trendyol Süper Lig": [
@@ -387,28 +409,33 @@ v_ms2 = ms2_olasilik - (100 / b_ms2)
 
 st.markdown("""
 <style>
-    /* Kart tasarımı */
+    /* Premium Kartlar için zorlayıcı stil */
+    div[data-testid="stVerticalBlock"] > div:has(.premium-card) {
+        background: transparent !important;
+    }
+    
     .premium-card {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        border-radius: 15px;
-        padding: 20px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-        margin-bottom: 20px;
-        border: 1px solid #334155;
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
+        border-radius: 15px !important;
+        padding: 20px !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+        margin-bottom: 20px !important;
+        border: 1px solid #334155 !important;
+        color: white !important;
     }
-    /* Başlık tasarımı */
+    
     .badge {
-        background: #f59e0b;
-        color: black;
-        padding: 5px 15px;
-        border-radius: 20px;
-        font-weight: bold;
-        display: inline-block;
-        margin-bottom: 15px;
+        background: #f59e0b !important;
+        color: black !important;
+        padding: 5px 15px !important;
+        border-radius: 20px !important;
+        font-weight: bold !important;
+        display: inline-block !important;
+        margin-bottom: 15px !important;
     }
-    /* Sinyal renkleri */
-    .signal-green { color: #10b981; font-weight: bold; }
-    .signal-red { color: #ef4444; font-weight: bold; }
+    
+    .signal-green { color: #10b981 !important; font-weight: bold; }
+    .signal-red { color: #ef4444 !important; font-weight: bold; }
 </style>
 """, unsafe_allow_html=True)
 
