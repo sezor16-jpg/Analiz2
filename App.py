@@ -79,6 +79,23 @@ def mac_simule_et(ev_gol_beklentisi, dep_gol_beklentisi):
     
     return ms1_yuzde, x_yuzde, ms2_yuzde
 
+
+def ai_yorum_uret(ev_sahibi, deplasman, ev_xg, dep_xg, ms1_olasilik, ms2_olasilik, en_iyi_bahis):
+    if ev_xg > dep_xg + 0.5:
+        durum = f"{ev_sahibi} sahada çok daha baskın bir futbol oynuyor."
+    elif dep_xg > ev_xg + 0.5:
+        durum = f"{deplasman} hücum hattı ev sahibine göre daha tehlikeli görünüyor."
+    else:
+        durum = "İki takımın da hücum gücü birbirine yakın, kafa kafaya bir maç bizi bekliyor."
+    
+    if "MS" in en_iyi_bahis:
+        tahmin_yorum = "Modelimiz bu mücadelede taraf bahsini güvenli buluyor."
+    elif "Üst" in en_iyi_bahis:
+        tahmin_yorum = "Beklentimiz, iki takımın da gol yollarındaki etkinliğiyle yüksek tempolu bir oyun."
+    else:
+        tahmin_yorum = "Stratejik olarak dengeli bir müsabaka öngörüyoruz."
+        
+    return f"ANALİZ RAPORU: {durum} {tahmin_yorum} ({en_iyi_bahis} önerisi öne çıkıyor.)"
 # 1. BÜYÜK LİG VE TAKIM VERİTABANI
 LIG_VERITABANI = {
     "Türkiye Trendyol Süper Lig": [
@@ -441,9 +458,14 @@ with sekme1:
         st.plotly_chart(fig, use_container_width=True, key=f"grafik_{grafik_tipi}")
         st.markdown('</div>', unsafe_allow_html=True)
         
-        # YORUM KISMI
+       # OTOMATİK AI YORUM KARTI
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-        kullanici_notu = st.text_area("✍️ Analiz Yorumun:", placeholder="Maç hakkında notunu buraya yaz...")
+        st.subheader("🤖 AI Maç Yorumu")
+        
+        # Yorumu burada üretiyoruz
+        otomatik_yorum = ai_yorum_uret(ev_sahibi, deplasman, ev_xg, dep_xg, ms1_olasilik, ms2_olasilik, en_iyi_bahis)
+        
+        st.info(otomatik_yorum) # Mavi, şık bir kutuda yorumu basar
         st.markdown('</div>', unsafe_allow_html=True)
    
     with col_sag:
