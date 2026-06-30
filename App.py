@@ -395,12 +395,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- SEKME 1: ANALİZ EKRANI (PROFESYONEL VERSİYON) ---
+# --- SEKME 1: ANALİZ EKRANI ---
 with sekme1:
-    st.markdown('<div class="badge">SEZGİN GÖRMÜŞ AI PRO v8.0</div>', unsafe_allow_html=True)
-    st.title("📊 Yapay Zeka Maç Analiz Paneli")
-    
-    # İstatistik Özet Kartları
+    # 1. STRATEJİ MANTIĞINI TANIMLA (NameError'ı engellemek için yukarı taşıdık)
     en_iyi_bahis = "RİSKLİ MÜSABAKA (PAS) ⚠️"
     pazar_t = "Yok"
     if v_ms1 > 0 and ms1_olasilik >= 48: en_iyi_bahis, pazar_t = f"Maç Sonucu 1 ({ev_sahibi})", "Maç Sonucu"
@@ -411,56 +408,67 @@ with sekme1:
     elif kg_var_olasilik >= 60: en_iyi_bahis, pazar_t = "Karşılıklı Gol Var (KG Var)", "Karşılıklı Gol"
     elif kg_var_olasilik <= 40: en_iyi_bahis, pazar_t = "Karşılıklı Gol Yok (KG Yok)", "Karşılıklı Gol"
 
-    # 2. Şimdi metric içinde rahatça kullanabilirsin
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Ev Sahibi xG", f"{ev_xg:.2f}")
-    m2.metric("Deplasman xG", f"{dep_xg:.2f}")
-    m3.metric("Maç Tahmini", en_iyi_bahis.split(" (")[0])
-    m4.metric("Güven Skoru", "%78")
-
-    col_sol, col_sag = st.columns([1, 1])
-
+    st.markdown('<div class="badge">SEZGİN GÖRMÜŞ VERİ ANALİZİ</div>', unsafe_allow_html=True)
+    st.title("📊 Sezgin Görmüş Matematiksel Tahmin Robotu")
+    
+    # Metrikler artık hata vermez
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Ev xG", f"{ev_xg:.2f}")
+    m2.metric("Dep xG", f"{dep_xg:.2f}")
+    m3.metric("Tahmin", en_iyi_bahis.split(" (")[0])
+    
+    col_sol, col_sag = st.columns([11, 10])
+    
     with col_sol:
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-        st.subheader("🎯 Olasılık Görselleştirme")
+        st.subheader("🎯 Profesyonel Olasılık Dağılımı")
         
-        grafik_tipi = st.radio("İstatistik Pazarı:", ["Maç Sonucu", "1.5 Alt/Üst", "2.5 Alt/Üst", "3.5 Alt/Üst", "KG Durumu"], horizontal=True)
+        grafik_tipi = st.radio("Görünüm:", ["Maç Sonucu", "1.5 Alt/Üst", "2.5 Alt/Üst", "3.5 Alt/Üst", "KG Durumu"], horizontal=True)
         
-        # ... [Grafik oluşturma kodun burada aynı kalmalı] ...
-        st.plotly_chart(fig, use_container_width=True, key=f"analiz_grafik_{grafik_tipi}")
-        st.markdown('</div>', unsafe_allow_html=True)
+        if grafik_tipi == "Maç Sonucu":
+            fig = go.Figure(data=[go.Pie(labels=['MS1', 'X', 'MS2'], values=[ms1_olasilik, x_olasilik, ms2_olasilik], hole=.4)])
+        elif "Alt/Üst" in grafik_tipi:
+            if "1.5" in grafik_tipi: vals = [gol_ust_1_5, gol_alt_1_5]
+            elif "2.5" in grafik_tipi: vals = [gol_ust_2_5, gol_alt_2_5]
+            else: vals = [gol_ust_3_5, gol_alt_3_5]
+            fig = go.Figure(data=[go.Pie(labels=['Üst', 'Alt'], values=vals, hole=.4, marker_colors=['#0acc31', '#d11515'])])
+        else:
+            fig = go.Figure(data=[go.Pie(labels=['KG Var', 'KG Yok'], values=[kg_var_olasilik, 100-kg_var_olasilik], hole=.4, marker_colors=['#0acc31', '#d11515'])])
 
-        # Yorum Alanı (YENİ EKLEME)
+        fig.update_layout(template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=350, margin=dict(t=30, b=30, l=30, r=30), showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5))
+        
+        # KEY parametresi eklendi
+        st.plotly_chart(fig, use_container_width=True, key=f"grafik_{grafik_tipi}")
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # YORUM KISMI
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-        st.subheader("✍️ AI & Analist Yorumu")
-        # Analize dayalı otomatik metin
-        otomatik_yorum = f"Model verilerine göre {ev_sahibi} ve {deplasman} arasındaki bu mücadelede, {pazar_t} marketinde yüksek olasılıklı bir değer yakalandı."
-        st.info(f"💡 {otomatik_yorum}")
-        
-        kullanici_yorumu = st.text_area("Kendi analiz notunu ekle:", height=100)
-        if st.button("💾 Notu Arşive Kaydet"):
-            st.success("Analiz notun arşive eklendi!")
+        kullanici_notu = st.text_area("✍️ Analiz Yorumun:", placeholder="Maç hakkında notunu buraya yaz...")
         st.markdown('</div>', unsafe_allow_html=True)
-
+   
     with col_sag:
-        # Sinyal Odası (Value Oranları)
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-        st.subheader("🚨 Value Oran Analizi")
-        # ... [sinyal_satiri fonksiyonun burada çalışmaya devam eder] ...
+        st.subheader("🚨 Sinyal Odası")
+        def sinyal_satiri(pazar, model_p, oran, value):
+            renk = "signal-green" if value > 0 else "signal-red"
+            durum = "🔥" if value > 0 else "❌"
+            st.markdown(f'<div style="padding: 8px 0; border-bottom: 1px solid #1e293b;"><b>{pazar}</b> {durum}<br><small>Değer: <span class="{renk}">{value:+.2f}</span></small></div>', unsafe_allow_html=True)
+        
         sinyal_satiri(f"{ev_sahibi} MS1", ms1_olasilik, b_ms1, v_ms1)
         sinyal_satiri("Beraberlik (X)", x_olasilik, b_x, v_x)
         sinyal_satiri(f"{deplasman} MS2", ms2_olasilik, b_ms2, v_ms2)
         st.markdown('</div>', unsafe_allow_html=True)
         
-        # Strateji Raporu
-        st.markdown('<div class="premium-card" style="border: 2px solid #f59e0b;">', unsafe_allow_html=True)
-        st.subheader("🚀 Stratejik İşlem")
-        st.markdown(f'<h3 style="color:#f59e0b;">{en_iyi_bahis}</h3>', unsafe_allow_html=True)
-        
-        if st.button("🎯 Kusursuz Analizi Mühürle"):
-            # ... [Kayıt mantığın aynı şekilde kalabilir] ...
-            st.success("Mühürlendi!")
-        st.markdown('</div>', unsafe_allow_html=True)
+        # STRATEJİ VE KAYIT
+        if st.button("💾 Analizi ve Yorumu Arşive Kaydet"):
+            df_logs = pd.read_csv(DB_FILE)
+            yeni = {
+                "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M"), "Ev Sahibi": ev_sahibi, "Deplasman": deplasman, 
+                "Onerilen_Bahis": en_iyi_bahis, "Yorum": kullanici_notu, "Sonuc": "Bekliyor"
+            }
+            df_logs = pd.concat([df_logs, pd.DataFrame([yeni])], ignore_index=True)
+            df_logs.to_csv(DB_FILE, index=False)
+            st.success("Mühürlendi kanka!")
 
 
 # --- SEKME 2: ARŞİV PANELİ ---
