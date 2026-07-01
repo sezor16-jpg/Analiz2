@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import os
 import math
+import plotly.express as px
 from datetime import datetime
 import numpy as np
 
@@ -370,10 +371,30 @@ dep_xg = ((dep_dis_xg * 0.5) + (dep_genel_xg * 0.5)) * (2.0 - puan_denge_carpan)
 ev_xg = max(ev_xg, 0.05)
 dep_xg = max(dep_xg, 0.05)
 
+tempo_skor = min(((ev_xg + dep_xg) / 4.0) * 100, 100)
+
+risk_skor = min(
+    abs(ms1_olasilik - ms2_olasilik) * 2,
+    100
+)
+
+gol_skor = min(ust_olasilik, 100)
+
+guven_skor = max(
+    ms1_olasilik,
+    x_olasilik,
+    ms2_olasilik
+)
+
+savunma_skor = max(
+    100 - ((ev_ic_savunma_ort + dep_dis_savunma_ort) * 20),
+    0
+)
+
 # Tüm gol ihtimallerini tek seferde hesaplayalım (Daha optimize)
 olasiliklar = []
-for i in range(6): # Ev sahibi gol sayısı
-    for j in range(6): # Deplasman gol sayısı
+for i in range(11): # Ev sahibi gol sayısı
+    for j in range(11): # Deplasman gol sayısı
         p = poisson_olasilik(i, ev_xg) * poisson_olasilik(j, dep_xg)
         olasiliklar.append({'toplam': i + j, 'p': p})
 
@@ -388,6 +409,20 @@ gol_alt_3_5, gol_ust_3_5 = get_p(3.5), 100 - get_p(3.5)
 ms1_olasilik, x_olasilik, ms2_olasilik = mac_simule_et(ev_xg, dep_xg)
 
 en_yuksek_skor_p, tahmin_ev_skor, tahmin_dep_skor = 0, 0, 0
+heatmap_data = []
+
+for i in range(6):
+    satir = []
+    for j in range(6):
+        p = poisson_olasilik(i, ev_xg) * poisson_olasilik(j, dep_xg)
+        satir.append(round(p * 100, 2))
+    heatmap_data.append(satir)
+
+heatmap_df = pd.DataFrame(
+    heatmap_data,
+    index=[f"{i} Gol" for i in range(6)],
+    columns=[f"{j} Gol" for j in range(6)]
+)
 for i in range(10):
     for j in range(10):
         p = poisson_olasilik(i, ev_xg) * poisson_olasilik(j, dep_xg)
@@ -462,6 +497,26 @@ with sekme1:
     m3.metric("Tahmin", en_iyi_bahis.split(" (")[0])
     
     col_sol, col_sag = st.columns([11, 10])
+
+    st.subheader("🔥 Skor Isı Haritası")
+
+    fig_heat = px.imshow(
+        heatmap_df,
+        text_auto=".1f",
+        aspect="auto",
+        labels=dict(
+            x="Deplasman Golü",
+            y="Ev Sahibi Golü",
+            color="Olasılık %"
+        )
+    )
+    
+    fig_heat.update_layout(
+        template="plotly_dark",
+        height=500
+    )
+    
+    st.plotly_chart(fig_heat, use_container_width=True)
     
     with col_sol:
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
@@ -523,7 +578,24 @@ with sekme1:
         sinyal_satiri(f"MS 2 ({deplasman})", ms2_olasilik, b_ms2, v_ms2)
         
         st.markdown('</div>', unsafe_allow_html=True) # Sinyal kartı sonu
+
+        st.subheader("🧬 Maç DNA Analizi")
+
+        st.progress(tempo_skor / 100)
+        st.caption(f"⚡ Tempo Seviyesi : %{tempo_skor:.0f}")
         
+        st.progress(gol_skor / 100)
+        st.caption(f"🎯 Gol Potansiyeli : %{gol_skor:.0f}")
+        
+        st.progress(risk_skor / 100)
+        st.caption(f"⚠ Risk Seviyesi : %{risk_skor:.0f}")
+        
+        st.progress(guven_skor / 100)
+        st.caption(f"🧠 Model Güveni : %{guven_skor:.0f}")
+        
+        st.progress(savunma_skor / 100)
+        st.caption(f"🛡 Savunma Kalitesi : %{savunma_skor:.0f}")
+                
         # --- STRATEJİ VE KAYIT ---
         st.markdown("---")
         # Butonun daha dikkat çekici olması için kolon yapısı
