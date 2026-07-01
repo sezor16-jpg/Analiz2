@@ -533,10 +533,15 @@ with sekme1:
                 yeni = {
                     "Tarih": datetime.now().strftime("%Y-%m-%d %H:%M"), 
                     "Ev Sahibi": ev_sahibi, 
-                    "Deplasman": deplasman, 
+                    "Deplasman": deplasman,
+                    "Sonuc": "Bekliyor",
+                    "Model_MS1": round(ms1_olasilik, 1), # <-- EKLENDİ
+                    "Model_X": round(x_olasilik, 1),     # <-- EKLENDİ
+                    "Model_MS2": round(ms2_olasilik, 1), # <-- EKLENDİ
+                    "Model_Ust": round(ust_olasilik, 1), # <-- EKLENDİ
+                    "Model_KGVar": round(kg_var_olasilik, 1), # <-- EKLENDİ
                     "Onerilen_Bahis": en_iyi_bahis, 
-                    "Yorum": otomatik_yorum, # Hata düzeldi: kullanici_notu -> otomatik_yorum
-                    "Sonuc": "Bekliyor"
+                    "Pazar_Tipi": pazar_t,               # <-- EKLENDİ
                 }
                 df_logs = pd.concat([df_logs, pd.DataFrame([yeni])], ignore_index=True)
                 df_logs.to_csv(DB_FILE, index=False)
