@@ -286,15 +286,15 @@ st.sidebar.markdown("### 🏆 Genel Lig İstatistikleri")
 col_genel1, col_genel2 = st.sidebar.columns(2)
 with col_genel1:
     st.markdown("**Ev Sahibi (Genel)**")
-    ev_genel_mac = st.number_input("Toplam Maç (Ev)", min_value=1, value=20, step=1)
-    ev_genel_attigi = st.number_input("Toplam Attığı Gol (Ev)", min_value=0, value=35, step=1)
-    ev_genel_yedigi = st.number_input("Toplam Yediği Gol (Ev)", min_value=0, value=20, step=1)
+    ev_genel_mac = st.number_input("Toplam Maç (Ev)", min_value=1, value=1, step=1)
+    ev_genel_attigi = st.number_input("Toplam Attığı Gol (Ev)", min_value=0, value=1, step=1)
+    ev_genel_yedigi = st.number_input("Toplam Yediği Gol (Ev)", min_value=0, value=1, step=1)
 
 with col_genel2:
     st.markdown("**Deplasman (Genel)**")
-    dep_genel_mac = st.number_input("Toplam Maç (Dep)", min_value=1, value=20, step=1)
-    dep_genel_attigi = st.number_input("Toplam Attığı Gol (Dep)", min_value=0, value=25, step=1)
-    dep_genel_yedigi = st.number_input("Toplam Yediği Gol (Dep)", min_value=0, value=28, step=1)
+    dep_genel_mac = st.number_input("Toplam Maç (Dep)", min_value=1, value=1, step=1)
+    dep_genel_attigi = st.number_input("Toplam Attığı Gol (Dep)", min_value=0, value=1, step=1)
+    dep_genel_yedigi = st.number_input("Toplam Yediği Gol (Dep)", min_value=0, value=1, step=1)
 
 st.sidebar.write("---")
 st.sidebar.markdown("### 🛡️ Sağlık & Kadro Eksik Raporu")
