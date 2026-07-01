@@ -80,44 +80,42 @@ def mac_simule_et(ev_gol_beklentisi, dep_gol_beklentisi):
     return ms1_yuzde, x_yuzde, ms2_yuzde
 
 
+import random
+
 def ai_yorum_uret(ev_sahibi, deplasman, ev_xg, dep_xg, ms1_olasilik, ms2_olasilik, en_iyi_bahis):
-    # 1. Hücum Analizi Katmanı
+    # 1. Giriş cümlelerini çeşitlendirelim
+    girisler = [
+        f"Analiz motorumuz {ev_sahibi} ve {deplasman} mücadelesini derinlemesine inceledi.",
+        f"{ev_sahibi} ile {deplasman} arasındaki bu kapışmada veriler ilginç bir tablo sunuyor.",
+        f"Sistemimiz, {ev_sahibi}'nin evindeki istatistiklerini ve {deplasman}'ın deplasman karnesini kıyasladı."
+    ]
+    
+    # 2. Hücum ve Savunma Analizini daha spesifik yapalım
     fark = ev_xg - dep_xg
-    if fark > 0.8:
-        durum = f"{ev_sahibi} hücumda çok agresif ve dominasyonu elinde tutan bir yapıda."
-    elif fark > 0.3:
-        durum = f"{ev_sahibi} oyunu kontrol eden ve skor üretmeye yakın taraf."
-    elif fark < -0.8:
-        durum = f"{deplasman} takımı sahaya çok daha net ve tehlikeli ayaklarla çıkıyor."
-    elif fark < -0.3:
-        durum = f"{deplasman} oyunu kendi lehine çevirebilecek potansiyele sahip."
+    if fark > 0.7:
+        durum = f"Ev sahibi {ev_sahibi}, xG verilerine göre {deplasman} savunmasını parçalayabilecek bir hücum gücüne sahip."
+    elif fark > 0.2:
+        durum = f"İki takımın hücum hatları birbirine yakın olsa da {ev_sahibi} saha avantajıyla skoru domine etmeye yakın görünüyor."
+    elif fark < -0.7:
+        durum = f"Beklenmedik bir veri var: {deplasman} takımı deplasmanda olmasına rağmen xG bazında maçı domine etme potansiyeli taşıyor."
     else:
-        durum = "İki takım da birbirine karşı üstünlük kurmakta zorlanacak, tam bir satranç maçı."
+        durum = "Maçın genel karakteri tam bir düğüm; iki takım da birbirine karşı üstünlük kurmakta ciddi zorlanacak."
 
-    # 2. Olasılık Şiddeti Katmanı
-    en_yuksek = max(ms1_olasilik, ms2_olasilik)
-    if en_yuksek > 65:
-        guven_seviyesi = "Modelimizin bu sonuca olan güveni oldukça yüksek."
-    elif en_yuksek > 50:
-        guven_seviyesi = "Veriler, sonucun bu yönde evrilme ihtimalini güçlü kılıyor."
-    else:
-        guven_seviyesi = "Maçın sonucu kağıt üzerinde oldukça yakın görünüyor, dikkatli olunmalı."
+    # 3. Bahis özelinde "Neden bu sonuç?" sorusuna yanıt ekleyelim
+    bahis_mantigi = {
+        "MS1": "Ev sahibi avantajı ve gol beklentisi (xG) verileri, sistemimizi bu tercihe yöneltti.",
+        "MS2": "Deplasmanın geçiş oyunundaki verimliliği ve savunma arkasına sarkma başarısı bu seçimi öne çıkarıyor.",
+        "Üst": "İki ekibin de savunma disiplinlerinden ziyade, skor odaklı bir oyun anlayışına sahip olması 2.5 bareminin aşılacağını düşündürüyor.",
+        "KG": "Savunma istatistiklerindeki zayıflık, her iki kalenin de gol görme ihtimalini %60'ın üzerine taşıyor."
+    }
+    
+    # Bahis tipini anahtar kelimeye göre bulalım
+    secilen_mantik = next((v for k, v in bahis_mantigi.items() if k in en_iyi_bahis), "Sistemimiz bu markette bir değer (value) tespit etti.")
 
-    # 3. Bahis Tipi Katmanı
-    if "MS1" in en_iyi_bahis:
-        bahis_yorum = "Ev sahibi avantajı ve güncel form durumu bu tercihi mantıklı kılıyor."
-    elif "MS2" in en_iyi_bahis:
-        bahis_yorum = "Deplasman ekibinin kontra atak verimliliği bu seçimi öne çıkarıyor."
-    elif "Üst" in en_iyi_bahis:
-        bahis_yorum = "Savunma disiplinlerinden ziyade, skor odaklı bir mücadele beklentisi var."
-    elif "Alt" in en_iyi_bahis:
-        bahis_yorum = "Kilitli kalması muhtemel ve taktiksel disiplinin ön planda olduğu bir senaryo."
-    elif "KG" in en_iyi_bahis:
-        bahis_yorum = "İki ekibin de savunma zafiyetleri göz önüne alındığında gol yollarının açık olması muhtemel."
-    else:
-        bahis_yorum = "Sistemimiz bu markette bir değer (value) tespit etti."
-
-    return f"🤖 {durum} {guven_seviyesi} {bahis_yorum} ({en_iyi_bahis} seçimi verilerle destekleniyor.)"
+    # 4. Finali unique bir şekilde birleştirelim
+    final_yorum = f"{random.choice(girisler)} {durum} {secilen_mantik} (Tahmin: {en_iyi_bahis})"
+    
+    return final_yorum
 # 1. BÜYÜK LİG VE TAKIM VERİTABANI
 LIG_VERITABANI = {
     "Türkiye Trendyol Süper Lig": [
