@@ -232,7 +232,7 @@ st.markdown("""
 sekme1, sekme2, sekme3 = st.tabs(["📊 Analiz Ekranı", "🗂️ Arşiv Paneli", "🎟️ Kupon Odası"])
 
 # --- SIDEBAR (AYNEN KORUNDU) ---
-st.sidebar.markdown("<h2 style='text-align: center; color: #8b5cf6; margin-bottom: 20px;'>📋 VERİ SEVİYESİ</h2>", unsafe_allow_html=True)
+st.sidebar.markdown("<h2 style='text-align: center; color: #8b5cf6; margin-bottom: 20px;'>📋 Veri Girişi</h2>", unsafe_allow_html=True)
 st.sidebar.markdown("### 🏟️ Müsabaka Seçim Odası")
 
 lig_listesi = list(LIG_VERITABANI.keys()) + ["🌍 Diğer / Listede Olmayan Lig"]
@@ -253,32 +253,32 @@ else:
     deplasman = st.sidebar.text_input("Deplasman Takım Adını Gir kanka:", "Deplasman") if dep_secim == "✍️ Kendim Yazacağım..." else dep_secim
 
 st.sidebar.write("---")
-st.sidebar.markdown("### 🌍 Lig Karakteristiği")
+st.sidebar.markdown("### 🌍 Lig Gol Ortalaması")
 lig_ort_gol = st.sidebar.slider("Lig Geneli Maç Başına Gol Ortalaması", 1.50, 4.00, 2.80, step=0.05)
 st.sidebar.write("---")
-st.sidebar.markdown("### 🎛️ Algoritma Taktik Dengesi")
+st.sidebar.markdown("### 🎛️ Form Durumu")
 form_agirligi = st.sidebar.slider("Son 5 Maçın (Form) Etki Oranı (%)", 20, 60, 35) / 100
 sezon_agirligi = 1.0 - form_agirligi
 
 st.sidebar.write("---")
 st.sidebar.markdown("### 🏠 Ev Sahibi İstatistikleri")
-ev_ic_mac = st.sidebar.number_input("İç Sahada Oynadığı Maç", min_value=1, value=15)
-ev_ic_puan = st.sidebar.number_input("İç Sahada Topladığı Puan", min_value=0, value=34)
-ev_toplam_gol = st.sidebar.number_input("İç Sahada Attığı Toplam Gol", min_value=0, value=38)
-ev_toplam_yenen = st.sidebar.number_input("İç Sahada Yediği Toplam Gol", min_value=0, value=12)
-ev_son5_attigi = st.sidebar.number_input("Son 5 Maçta Attığı Gol (Form)", min_value=0, value=11)
-ev_son5_yedigi = st.sidebar.number_input("Son 5 Maçta Yediği Gol (Form)", min_value=0, value=4)
+ev_ic_mac = st.sidebar.number_input("İç Sahada Oynadığı Maç", min_value=1, value=1)
+ev_ic_puan = st.sidebar.number_input("İç Sahada Topladığı Puan", min_value=0, value=1)
+ev_toplam_gol = st.sidebar.number_input("İç Sahada Attığı Toplam Gol", min_value=0, value=1)
+ev_toplam_yenen = st.sidebar.number_input("İç Sahada Yediği Toplam Gol", min_value=0, value=1)
+ev_son5_attigi = st.sidebar.number_input("Son 5 Maçta Attığı Gol (Form)", min_value=0, value=1)
+ev_son5_yedigi = st.sidebar.number_input("Son 5 Maçta Yediği Gol (Form)", min_value=0, value=1)
 ev_cs = st.sidebar.slider("Ev Sahibi Son 5 Maçta Gol Yemediği Maç Sayısı", 0, 5, 2)
 ev_onem = st.sidebar.slider("Ev Sahibinin Maç Önem Derecesi (1-5)", 1, 5, 5)
 
 st.sidebar.write("---")
 st.sidebar.markdown("### 🚀 Deplasman İstatistikleri")
-dep_dis_mac = st.sidebar.number_input("Dış Sahada Oynadığı Maç", min_value=1, value=15)
-dep_dis_puan = st.sidebar.number_input("Dış Sahada Topladığı Puan", min_value=0, value=28)
-dep_toplam_gol = st.sidebar.number_input("Dış Sahada Attığı Toplam Gol", min_value=0, value=29)
-dep_toplam_yenen = st.sidebar.number_input("Dış Sahada Yediği Toplam Gol", min_value=0, value=18)
-dep_son5_attigi = st.sidebar.number_input("Son 5 Maçta Dışarıda Attığı Gol", min_value=0, value=9)
-dep_son5_yedigi = st.sidebar.number_input("Son 5 Maçta Dışarıda Yediği Gol", min_value=0, value=6)
+dep_dis_mac = st.sidebar.number_input("Dış Sahada Oynadığı Maç", min_value=1, value=1)
+dep_dis_puan = st.sidebar.number_input("Dış Sahada Topladığı Puan", min_value=0, value=1)
+dep_toplam_gol = st.sidebar.number_input("Dış Sahada Attığı Toplam Gol", min_value=0, value=1)
+dep_toplam_yenen = st.sidebar.number_input("Dış Sahada Yediği Toplam Gol", min_value=0, value=1)
+dep_son5_attigi = st.sidebar.number_input("Son 5 Maçta Dışarıda Attığı Gol", min_value=0, value=1)
+dep_son5_yedigi = st.sidebar.number_input("Son 5 Maçta Dışarıda Yediği Gol", min_value=0, value=1)
 dep_cs = st.sidebar.slider("Deplasman Son 5 Maçta Gol Yemediği Maç Sayısı", 0, 5, 1)
 dep_onem = st.sidebar.slider("Deplasmanın Maç Önem Derecesi (1-5)", 1, 5, 4)
 
@@ -450,12 +450,12 @@ with sekme1:
     elif kg_var_olasilik <= 40: en_iyi_bahis, pazar_t = "Karşılıklı Gol Yok (KG Yok)", "Karşılıklı Gol"
 
     st.markdown('<div class="badge">SEZGİN GÖRMÜŞ VERİ ANALİZİ</div>', unsafe_allow_html=True)
-    st.title("📊 Sezgin Görmüş Matematiksel Tahmin Robotu")
+    st.title("📊 Matematiksel Tahmin Robotu")
     
     # Metrikler artık hata vermez
     m1, m2, m3 = st.columns(3)
-    m1.metric("Ev xG", f"{ev_xg:.2f}")
-    m2.metric("Dep xG", f"{dep_xg:.2f}")
+    m1.metric("Ev xG oranı ", f"{ev_xg:.2f}")
+    m2.metric("Dep xG oranı ", f"{dep_xg:.2f}")
     m3.metric("Tahmin", en_iyi_bahis.split(" (")[0])
     
     col_sol, col_sag = st.columns([11, 10])
@@ -494,7 +494,7 @@ with sekme1:
    
     with col_sag:
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-        st.subheader("🚨 Tahmin ve Sinyal Odası")
+        st.subheader("🚨 Tahmin")
         
         # Sinyalleri iyileştiren geliştirilmiş fonksiyon
         def sinyal_satiri(pazar, model_p, oran, value):
