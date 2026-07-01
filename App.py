@@ -65,7 +65,7 @@ def poisson_olasilik(k, lmbda):
     return (math.exp(-lmbda) * (lmbda**k)) / math.factorial(k)
     
 def mac_simule_et(ev_gol_beklentisi, dep_gol_beklentisi):
-    simulasyon_sayisi = 100000
+    simulasyon_sayisi = 50000
     ev_goller = np.random.poisson(ev_gol_beklentisi, simulasyon_sayisi)
     dep_goller = np.random.poisson(dep_gol_beklentisi, simulasyon_sayisi)
     
