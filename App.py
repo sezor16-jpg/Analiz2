@@ -237,48 +237,50 @@ sekme1, sekme2, sekme3 = st.tabs(["📊 Analiz Ekranı", "🗂️ Arşiv Paneli"
 st.sidebar.markdown("<h2 style='text-align: center; color: #8b5cf6;'>📋 VERİ SEVİYESİ</h2>", unsafe_allow_html=True)
 
 # 1. Lig ve Karakteristik
-with st.sidebar.expander("🌍 Lig ve Karakteristiği"):
-    secilen_lig = st.selectbox("Ligi Seç:", list(LIG_VERITABANI.keys()) + ["🌍 Diğer"])
-    if secilen_lig == "🌍 Diğer":
-        ev_sahibi = st.text_input("Ev Sahibi:", "Ev Sahibi")
-        deplasman = st.text_input("Deplasman:", "Deplasman")
-    else:
-        ev_sahibi = st.selectbox("Ev Sahibi:", ["✍️ Kendim Yazacağım"] + LIG_VERITABANI[secilen_lig])
-        deplasman = st.selectbox("Deplasman:", ["✍️ Kendim Yazacağım"] + LIG_VERITABANI[secilen_lig])
-    lig_ort_gol = st.slider("Lig Maç Başı Gol Ort.", 1.50, 4.00, 2.80, 0.05)
-    form_agirligi = st.slider("Form Etki Oranı (%)", 20, 60, 35) / 100
-    sezon_agirligi = 1.0 - form_agirligi
+secilen_lig = st.sidebar.selectbox("Ligi Seç:", list(LIG_VERITABANI.keys()) + ["🌍 Diğer"])
+if secilen_lig == "🌍 Diğer":
+    ev_sahibi = st.sidebar.text_input("Ev Sahibi:", "Ev Sahibi")
+    deplasman = st.sidebar.text_input("Deplasman:", "Deplasman")
+else:
+    ev_sahibi = st.sidebar.selectbox("Ev Sahibi:", ["✍️ Kendim Yazacağım"] + LIG_VERITABANI[secilen_lig])
+    deplasman = st.sidebar.selectbox("Deplasman:", ["✍️ Kendim Yazacağım"] + LIG_VERITABANI[secilen_lig])
+
+lig_ort_gol = st.sidebar.slider("Lig Maç Başı Gol Ort.", 1.50, 4.00, 2.80, 0.05)
+form_agirligi = st.sidebar.slider("Form Etki Oranı (%)", 20, 60, 35) / 100
+sezon_agirligi = 1.0 - form_agirligi
 
 # 2. Ev Sahibi Verileri
-with st.sidebar.expander("🏠 Ev Sahibi İstatistikleri"):
-    ev_ic_mac = st.number_input("İç Saha Maç Sayısı", 1, 30, 15)
-    ev_ic_puan = st.number_input("İç Saha Puan", 0, 100, 34)
-    ev_toplam_gol = st.number_input("İç Saha Atılan Gol", 0, 100, 38)
-    ev_toplam_yenen = st.number_input("İç Saha Yenilen Gol", 0, 100, 12)
-    ev_son5_attigi = st.number_input("Son 5 Atılan", 0, 20, 11)
-    ev_son5_yedigi = st.number_input("Son 5 Yenilen", 0, 20, 4)
-    ev_cs = st.slider("Gol Yemediği Maç (Son 5)", 0, 5, 2)
-    ev_onem = st.slider("Maç Önem Derecesi", 1, 5, 5)
+st.sidebar.markdown("---")
+st.sidebar.subheader("🏠 Ev Sahibi")
+ev_ic_mac = st.sidebar.number_input("İç Saha Maç Sayısı", 1, 30, 15)
+ev_ic_puan = st.sidebar.number_input("İç Saha Puan", 0, 100, 34)
+ev_toplam_gol = st.sidebar.number_input("İç Saha Atılan Gol", 0, 100, 38)
+ev_toplam_yenen = st.sidebar.number_input("İç Saha Yenilen Gol", 0, 100, 12)
+ev_son5_attigi = st.sidebar.number_input("Son 5 Atılan", 0, 20, 11)
+ev_son5_yedigi = st.sidebar.number_input("Son 5 Yenilen", 0, 20, 4)
+ev_cs = st.sidebar.slider("Gol Yemediği Maç (Son 5)", 0, 5, 2)
+ev_onem = st.sidebar.slider("Maç Önem Derecesi", 1, 5, 5)
 
 # 3. Deplasman Verileri
-with st.sidebar.expander("🚀 Deplasman İstatistikleri"):
-    dep_dis_mac = st.number_input("Dış Saha Maç Sayısı", 1, 30, 15)
-    dep_dis_puan = st.number_input("Dış Saha Puan", 0, 100, 28)
-    dep_toplam_gol = st.number_input("Dış Saha Atılan Gol", 0, 100, 29)
-    dep_toplam_yenen = st.number_input("Dış Saha Yenilen Gol", 0, 100, 18)
-    dep_son5_attigi = st.number_input("Son 5 Atılan", 0, 20, 9)
-    dep_son5_yedigi = st.number_input("Son 5 Yenilen", 0, 20, 6)
-    dep_cs = st.slider("Gol Yemediği Maç (Son 5)", 0, 5, 1)
-    dep_onem = st.slider("Maç Önem Derecesi", 1, 5, 4)
+st.sidebar.markdown("---")
+st.sidebar.subheader("🚀 Deplasman")
+dep_dis_mac = st.sidebar.number_input("Dış Saha Maç Sayısı", 1, 30, 15)
+dep_dis_puan = st.sidebar.number_input("Dış Saha Puan", 0, 100, 28)
+dep_toplam_gol = st.sidebar.number_input("Dış Saha Atılan Gol", 0, 100, 29)
+dep_toplam_yenen = st.sidebar.number_input("Dış Saha Yenilen Gol", 0, 100, 18)
+dep_son5_attigi = st.sidebar.number_input("Son 5 Atılan", 0, 20, 9)
+dep_son5_yedigi = st.sidebar.number_input("Son 5 Yenilen", 0, 20, 6)
+dep_cs = st.sidebar.slider("Gol Yemediği Maç (Son 5)", 0, 5, 1)
+dep_onem = st.sidebar.slider("Maç Önem Derecesi", 1, 5, 4)
 
 # 4. Oranlar ve Sağlık
-with st.sidebar.expander("📊 Oranlar ve Kadro Eksik"):
-    b_ms1 = st.number_input("Oran: MS 1", 1.01, 20.0, 1.85)
-    b_x = st.number_input("Oran: X", 1.01, 20.0, 3.60)
-    b_ms2 = st.number_input("Oran: MS 2", 1.01, 20.0, 3.40)
-    ev_kritik_eksik = st.slider("Ev Kritik Eksik", 0, 3, 0)
-    dep_kritik_eksik = st.slider("Dep Kritik Eksik", 0, 3, 1)
-
+st.sidebar.markdown("---")
+st.sidebar.subheader("📊 Oranlar")
+b_ms1 = st.sidebar.number_input("Oran: MS 1", 1.01, 20.0, 1.85)
+b_x = st.sidebar.number_input("Oran: X", 1.01, 20.0, 3.60)
+b_ms2 = st.sidebar.number_input("Oran: MS 2", 1.01, 20.0, 3.40)
+ev_kritik_eksik = st.sidebar.slider("Ev Kritik Eksik", 0, 3, 0)
+dep_kritik_eksik = st.sidebar.slider("Dep Kritik Eksik", 0, 3, 1)
 
 # --- ⚙️ SEZGİN GÖRMÜŞ MATHEMATICAL MATRIX MOTORU ---
 ev_ic_hucum_ort = ev_toplam_gol / ev_ic_mac
