@@ -501,18 +501,18 @@ with sekme1:
         
         # Sinyalleri iyileştiren geliştirilmiş fonksiyon
         def sinyal_satiri(pazar, model_p, oran, value):
-            renk = "signal-green" if value > 0 else "signal-red"
-            ikon = "✅" if value > 0 else "⚠️"
-            # Görseli güçlendirmek için satırları biraz daha belirgin kıldık
+            renk = "#10b981" if value > 0 else "#ef4444"
+            yuzde = min(abs(value) * 10, 100) # Değerin gücünü görselleştirmek için
+            
             st.markdown(f"""
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #1e293b;">
-                <div>
-                    <div style='font-weight: 600; color: #f8fafc;'>{pazar}</div>
-                    <div style="font-size: 12px; color: #94a3b8;">Olasılık: %{model_p:.1f} | Oran: {oran}</div>
+            <div style="background: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 10px; margin-bottom: 8px; border: 1px solid #1e293b;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span style="font-weight: 600; color: #f8fafc;">{pazar}</span>
+                    <span style="color: {renk}; font-weight: bold;">{value:+.2f}</span>
                 </div>
-                <div style="text-align: right;">
-                    <div class='{renk}' style="font-size: 18px;">{value:+.2f}</div>
-                    <div style="font-size: 12px; color: #64748b;">{ikon}</div>
+                <div style="font-size: 11px; color: #64748b; margin-bottom: 5px;">Olasılık: %{model_p:.1f} | Oran: {oran}</div>
+                <div style="width: 100%; background: #334155; height: 4px; border-radius: 2px;">
+                    <div style="width: {yuzde}%; background: {renk}; height: 4px; border-radius: 2px;"></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
