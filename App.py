@@ -352,8 +352,10 @@ puan_denge_carpan = 0.85 + (puan_orani * 0.30)
 onem_farki = ev_onem - dep_onem
 ev_onem_carpan = 1.0 + (onem_farki * 0.03)
 dep_onem_carpan = 1.0 - (onem_farki * 0.03)
-ev_kadro_cezasi = (ev_kritik_eksik * 0.22) + (ev_normal_eksik * 0.08)
-dep_kadro_cezasi = (dep_kritik_eksik * 0.22) + (dep_normal_eksik * 0.08)
+
+# YENİ NESİL KADRO ETKİSİ (Yüzdesel Çarpan)
+ev_xg_etkisi = 1 - (ev_kritik_eksik * 0.12) - (ev_normal_eksik * 0.03)
+dep_xg_etkisi = 1 - (dep_kritik_eksik * 0.12) - (dep_normal_eksik * 0.03)
 
 ev_ic_xg = (yarim_lig_ort * ev_ic_hucum_katsayi * dep_dis_savunma_katsayi)
 dep_dis_xg = (yarim_lig_ort * dep_dis_hucum_katsayi * ev_ic_savunma_katsayi)
@@ -361,11 +363,13 @@ dep_dis_xg = (yarim_lig_ort * dep_dis_hucum_katsayi * ev_ic_savunma_katsayi)
 ev_genel_xg = (yarim_lig_ort * ev_genel_hucum_katsayi * dep_genel_savunma_katsayi)
 dep_genel_xg = (yarim_lig_ort * dep_genel_hucum_katsayi * ev_genel_savunma_katsayi)
 
-ev_xg = ((ev_ic_xg * 0.5) + (ev_genel_xg * 0.5)) * puan_denge_carpan * ev_onem_carpan - ev_kadro_cezasi
-dep_xg = ((dep_dis_xg * 0.5) + (dep_genel_xg * 0.5)) * (2.0 - puan_denge_carpan) * dep_onem_carpan - dep_kadro_cezasi
+# FİNAL xG HESAPLAMA (Artık daha sağlam)
+ev_xg = (((ev_ic_xg * 0.5) + (ev_genel_xg * 0.5)) * puan_denge_carpan * ev_onem_carpan) * ev_xg_etkisi
+dep_xg = (((dep_dis_xg * 0.5) + (dep_genel_xg * 0.5)) * (2.0 - puan_denge_carpan) * dep_onem_carpan) * dep_xg_etkisi
 
 ev_xg = max(ev_xg, 0.05)
 dep_xg = max(dep_xg, 0.05)
+# -----------------------------------------------------------
 
 # Tüm gol ihtimallerini tek seferde hesaplayalım (Daha optimize)
 olasiliklar = []
