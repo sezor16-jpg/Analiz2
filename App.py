@@ -353,39 +353,44 @@ onem_farki = ev_onem - dep_onem
 ev_onem_carpan = 1.0 + (onem_farki * 0.03)
 dep_onem_carpan = 1.0 - (onem_farki * 0.03)
 
-# YENİ NESİL KADRO ETKİSİ (Yüzdesel Çarpan)
-# Hücum gücü üzerindeki etki
+ev_ic_xg = (yarim_lig_ort * ev_ic_hucum_katsayi * dep_dis_savunma_katsayi)
+dep_dis_xg = (yarim_lig_ort * dep_dis_hucum_katsayi * ev_ic_savunma_katsayi)
+
+ev_genel_xg = (yarim_lig_ort * ev_genel_hucum_katsayi * dep_genel_savunma_katsayi)
+dep_genel_xg = (yarim_lig_ort * dep_genel_hucum_katsayi * ev_genel_savunma_katsayi)
+
+# =========================
+# GELİŞMİŞ KADRO ETKİ MOTORU
+# =========================
+
 ev_hucum_cezasi = (ev_kritik_eksik * 0.06) + (ev_normal_eksik * 0.02)
 dep_hucum_cezasi = (dep_kritik_eksik * 0.06) + (dep_normal_eksik * 0.02)
 
-# Savunma zafiyeti etkisi
 ev_savunma_zafiyeti = (ev_kritik_eksik * 0.04) + (ev_normal_eksik * 0.015)
 dep_savunma_zafiyeti = (dep_kritik_eksik * 0.04) + (dep_normal_eksik * 0.015)
 
-# Minimum ve maksimum sınırlar
 ev_hucum_cezasi = min(ev_hucum_cezasi, 0.25)
 dep_hucum_cezasi = min(dep_hucum_cezasi, 0.25)
 
 ev_savunma_zafiyeti = min(ev_savunma_zafiyeti, 0.20)
 dep_savunma_zafiyeti = min(dep_savunma_zafiyeti, 0.20)
 
-# Temel xG hesaplama
+# =========================
+# FİNAL xG HESABI
+# =========================
+
 ev_xg = ((ev_ic_xg * 0.5) + (ev_genel_xg * 0.5))
 dep_xg = ((dep_dis_xg * 0.5) + (dep_genel_xg * 0.5))
 
-# Puan ve motivasyon etkileri
 ev_xg *= puan_denge_carpan * ev_onem_carpan
 dep_xg *= (2.0 - puan_denge_carpan) * dep_onem_carpan
 
-# Hücum eksikleri kendi xG'yi düşürür
 ev_xg *= (1 - ev_hucum_cezasi)
 dep_xg *= (1 - dep_hucum_cezasi)
 
-# Savunma eksikleri rakibin xG'sini artırır
 ev_xg *= (1 + dep_savunma_zafiyeti)
 dep_xg *= (1 + ev_savunma_zafiyeti)
 
-# Güvenlik sınırı
 ev_xg = max(ev_xg, 0.05)
 dep_xg = max(dep_xg, 0.05)
 # -----------------------------------------------------------
