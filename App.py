@@ -495,7 +495,7 @@ with sekme1:
         grafik_tipi = st.radio("Görünüm:", ["Maç Sonucu", "1.5 Alt/Üst", "2.5 Alt/Üst", "3.5 Alt/Üst", "KG Durumu"], horizontal=True)
         
         if grafik_tipi == "Maç Sonucu":
-            fig = go.Figure(data=[go.Pie(labels=['MS1', 'X', 'MS2'], values=[ms1_olasilik, x_olasilik, ms2_olasilik], hole=.4)])
+            fig = go.Figure(data=[go.Pie(labels=['MS1', 'X', 'MS2'], values=[ms1_olasilik, x_olasilik, ms2_olasilik], hole=.4,marker_colors=['#0acc31', '#808080', '#f53333'])])
         elif "Alt/Üst" in grafik_tipi:
             if "1.5" in grafik_tipi: vals = [gol_ust_1_5, gol_alt_1_5]
             elif "2.5" in grafik_tipi: vals = [gol_ust_2_5, gol_alt_2_5]
