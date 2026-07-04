@@ -9,6 +9,14 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+# "anthropic" paketi opsiyoneldir — sadece kullanıcı gerçek AI yorumunu açarsa gerekir.
+# Kurulu değilse uygulama hiçbir şekilde bozulmaz, sadece o özellik devre dışı kalır.
+try:
+    import anthropic
+    ANTHROPIC_PAKETI_MEVCUT = True
+except ImportError:
+    ANTHROPIC_PAKETI_MEVCUT = False
+
 # =====================================================================================
 # SEZGİN GÖRMÜŞ VERİ ANALİZİ v9.0
 # -------------------------------------------------------------------------------------
@@ -286,28 +294,81 @@ def en_iyi_bahsi_belirle(metrics, ev_sahibi, deplasman, b_ms1, b_x, b_ms2,
 
 
 # --------------------------------------------------------------------------------
-# 🧾 KURAL TABANLI OTOMATİK YORUM (bir dil modeli DEĞİLDİR — şablon + rastgelelik)
+# 🧾 ZENGİNLEŞTİRİLMİŞ KURAL TABANLI YORUM MOTORU
+# -------------------------------------------------------------------------------
+# Bu bir dil modeli değildir — internet gerektirmez, her zaman çalışır. Ama artık tek
+# cümle değil; hücum/savunma dengesi, form, sakatlık durumu, value mantığı ve en olası
+# skor gibi gerçekten hesaplanan verileri harmanlayan 4 paragraflık bir "maç önizlemesi"
+# üretir. Kullanıcı isterse (aşağıdaki gerçek AI seçeneğiyle) bunun yerine kendi API
+# anahtarıyla Claude'dan daha akıcı bir yorum da ürettirebilir.
 # --------------------------------------------------------------------------------
-def otomatik_yorum_uret(ev_sahibi, deplasman, ev_xg, dep_xg, en_iyi_bahis, value_puani):
+def kural_tabanli_yorum_uret(ev_sahibi, deplasman, ev_xg, dep_xg, ev_ppg, dep_ppg,
+                              ev_cs, dep_cs, ev_kritik_eksik, dep_kritik_eksik,
+                              ev_normal_eksik, dep_normal_eksik,
+                              metrics, en_iyi_bahis, pazar_t, value_puani):
+
+    # --- 1) GİRİŞ + GENEL GÜÇ DENGESİ ---
     girisler = [
         f"Analiz motorumuz {ev_sahibi} ve {deplasman} mücadelesini derinlemesine inceledi.",
         f"{ev_sahibi} ile {deplasman} arasındaki bu kapışmada veriler ilginç bir tablo sunuyor.",
         f"Sistemimiz, {ev_sahibi}'nin evindeki istatistiklerini ve {deplasman}'ın deplasman karnesini kıyasladı.",
+        f"{ev_sahibi} - {deplasman} maçına dair modelin ortaya çıkardığı tablo şöyle:",
     ]
 
     fark = ev_xg - dep_xg
     if fark > 0.7:
-        durum = f"Ev sahibi {ev_sahibi}, xG verilerine göre {deplasman} savunmasını zorlayabilecek bir hücum gücüne sahip."
+        guc_yorumu = (f"Ev sahibi {ev_sahibi}, xG verilerine göre {deplasman} savunmasını zorlayabilecek "
+                      f"belirgin bir hücum üstünlüğüne sahip (Ev xG: {ev_xg:.2f} — Dep xG: {dep_xg:.2f}).")
     elif fark > 0.2:
-        durum = f"İki takımın hücum hatları birbirine yakın olsa da {ev_sahibi} saha avantajıyla öne çıkıyor."
+        guc_yorumu = (f"İki takımın hücum hatları birbirine yakın olsa da {ev_sahibi} saha avantajıyla "
+                      f"hafif önde görünüyor (Ev xG: {ev_xg:.2f} — Dep xG: {dep_xg:.2f}).")
     elif fark < -0.7:
-        durum = f"Dikkat çekici bir veri var: {deplasman} deplasmanda olmasına rağmen xG bazında maçı domine etme potansiyeli taşıyor."
+        guc_yorumu = (f"Dikkat çekici bir veri var: {deplasman} deplasmanda olmasına rağmen xG bazında "
+                      f"maçı domine etme potansiyeli taşıyor (Ev xG: {ev_xg:.2f} — Dep xG: {dep_xg:.2f}).")
+    elif fark < -0.2:
+        guc_yorumu = (f"{deplasman}, dış saha performansına rağmen gol beklentisinde hafif önde "
+                      f"(Ev xG: {ev_xg:.2f} — Dep xG: {dep_xg:.2f}).")
     else:
-        durum = "Maçın genel karakteri dengeli; iki takım da birbirine karşı belirgin bir üstünlük kurmakta zorlanabilir."
+        guc_yorumu = (f"Maçın genel karakteri dengeli; iki takım da birbirine karşı belirgin bir "
+                      f"üstünlük kurmakta zorlanabilir (Ev xG: {ev_xg:.2f} — Dep xG: {dep_xg:.2f}).")
 
+    if ev_ppg > dep_ppg * 1.3:
+        puan_yorumu = f"Puan ortalamaları da bu tabloyu destekliyor: {ev_sahibi} maç başına {ev_ppg:.2f} puan toplarken {deplasman} sadece {dep_ppg:.2f} puanda kalıyor."
+    elif dep_ppg > ev_ppg * 1.3:
+        puan_yorumu = f"Puan ortalamalarına bakınca tablo tersine dönüyor: {deplasman} maç başına {dep_ppg:.2f} puan alırken {ev_sahibi} {ev_ppg:.2f} puanda kalıyor — sürpriz ihtimali göz ardı edilmemeli."
+    else:
+        puan_yorumu = f"Puan ortalamaları da ({ev_sahibi}: {ev_ppg:.2f}, {deplasman}: {dep_ppg:.2f}) iki takımın birbirine yakın seviyede olduğunu gösteriyor."
+
+    paragraf_1 = f"{random.choice(girisler)} {guc_yorumu} {puan_yorumu}"
+
+    # --- 2) FORM & KADRO DURUMU ---
+    def savunma_notu(takim, cs):
+        if cs >= 4:
+            return f"{takim} son 5 maçının {cs} tanesinde kalesini gole kapattı; savunma organizasyonu bu aralıkta oldukça sağlam görünüyor."
+        if cs >= 2:
+            return f"{takim} son 5 maçta {cs} kez kalesini gole kapatarak ortalamanın üstünde bir savunma istikrarı sergiledi."
+        return f"{takim} son 5 maçta sadece {cs} kez gol yemedi; savunmada zaman zaman açıklar verdiği söylenebilir."
+
+    def sakatlik_notu(takim, kritik, normal):
+        if kritik >= 2:
+            return f"{takim} kadrosunda {kritik} kritik eksik bulunması (olası ilk 11 oyuncusu) hücum ve savunma gücünü belirgin şekilde düşürüyor."
+        if kritik == 1:
+            return f"{takim} kadrosunda 1 kritik eksik var; bu tek başına belirleyici olmasa da göz ardı edilmemeli."
+        if normal >= 3:
+            return f"{takim} kadrosunda kritik bir eksik yok ama {normal} rotasyon oyuncusunun yokluğu derinliği bir miktar zayıflatıyor."
+        return f"{takim} kadrosunda dikkat çekici bir eksik görünmüyor; bu tahmini güçlendiren bir faktör."
+
+    paragraf_2 = (
+        f"{savunma_notu(ev_sahibi, ev_cs)} {savunma_notu(deplasman, dep_cs)} "
+        f"{sakatlik_notu(ev_sahibi, ev_kritik_eksik, ev_normal_eksik)} "
+        f"{sakatlik_notu(deplasman, dep_kritik_eksik, dep_normal_eksik)}"
+    )
+
+    # --- 3) VALUE / ORAN MANTIĞI ---
     bahis_mantigi = {
         "MS1": "Ev sahibi avantajı ve gol beklentisi (xG) verileri bu tercihi öne çıkarıyor.",
         "MS2": "Deplasmanın hücum verimliliği ve rakip savunmasındaki zafiyetler bu seçimi destekliyor.",
+        "Beraberlik": "İki takımın gücünün birbirine çok yakın çıkması modelin beraberlik ihtimaline daha fazla ağırlık vermesine yol açıyor.",
         "Üst": "İki ekibin de skor odaklı bir oyun anlayışına sahip olması gol bareminin aşılma ihtimalini artırıyor.",
         "Alt": "Her iki takımın da savunma disiplini, düşük skorlu bir maç ihtimalini güçlendiriyor.",
         "KG Var": "Savunma istatistiklerindeki zayıflıklar her iki kalenin de gol görme ihtimalini artırıyor.",
@@ -316,11 +377,76 @@ def otomatik_yorum_uret(ev_sahibi, deplasman, ev_xg, dep_xg, en_iyi_bahis, value
     secilen_mantik = next((v for k, v in bahis_mantigi.items() if k in en_iyi_bahis),
                           "Sistemimiz bu markette olasılık/oran dengesizliği tespit etti.")
 
-    value_notu = ""
     if value_puani is not None:
-        value_notu = f" Model, bülten oranının ima ettiği adil olasılığa göre yaklaşık {value_puani:.1f} puanlık bir değer (value) tespit etti."
+        if value_puani >= 5:
+            value_yorumu = (f"Bülten oranlarına göre bu seçimde belirgin bir değer (value) var: model, oranın "
+                            f"ima ettiği adil olasılıktan yaklaşık {value_puani:.1f} puan daha yüksek bir ihtimal hesaplıyor.")
+        elif value_puani > 0:
+            value_yorumu = (f"Küçük bir value avantajı görünüyor (~{value_puani:.1f} puan); bu tek başına "
+                            f"güçlü bir sinyal sayılmaz ama diğer verilerle birlikte tercihi destekliyor.")
+        else:
+            value_yorumu = "Bu seçimde belirgin bir oran/value avantajı yok; tercih daha çok ham olasılığa dayanıyor."
+    elif pazar_t == "Yok":
+        value_yorumu = "Model, hiçbir pazarda yeterince güçlü bir sinyal ya da value bulamadı; bu yüzden temkinli bir duruş öneriliyor."
+    else:
+        value_yorumu = "Bu pazar için oran girilmediğinden value hesaplanmadı; tahmin sadece model olasılığına dayanıyor."
 
-    return f"{random.choice(girisler)} {durum} {secilen_mantik}{value_notu} (Tahmin: {en_iyi_bahis})"
+    en_iyi_skor = metrics.get("en_iyi_skor", (0, 0))
+    skor_yorumu = (f"Modelin en olası gördüğü skor {ev_sahibi} {en_iyi_skor[0]}-{en_iyi_skor[1]} {deplasman} "
+                   f"(~%{metrics.get('en_iyi_skor_p', 0):.1f} olasılıkla — tek bir skor için bu normal bir orandır).")
+
+    paragraf_3 = f"{secilen_mantik} {value_yorumu} {skor_yorumu}"
+
+    # --- 4) KAPANIŞ / SORUMLULUK NOTU ---
+    kapanislar = [
+        "Yine de unutma: bu bir olasılık tahminidir, kesinlik iddiası taşımaz.",
+        "Bahis kararların her zaman kendi risk toleransına bağlı olmalı; bu yalnızca istatistiksel bir görüş.",
+        "Futbolun sürpriz doğası gereği, düşük olasılıklı sonuçlar da gerçekleşebilir — bankoya oynama.",
+        "Model geçmiş verilere dayanır; sakatlık, taktik değişikliği gibi son dakika gelişmelerini her zaman yakalayamayabilir.",
+    ]
+    paragraf_4 = f"{random.choice(kapanislar)} (Tahmin: {en_iyi_bahis})"
+
+    return [paragraf_1, paragraf_2, paragraf_3, paragraf_4]
+
+
+# --------------------------------------------------------------------------------
+# 🧠 GERÇEK AI İLE ZENGİNLEŞTİRME (OPSİYONEL — kullanıcının kendi API anahtarıyla)
+# --------------------------------------------------------------------------------
+def claude_ile_yorum_uret(api_anahtari, ev_sahibi, deplasman, ev_xg, dep_xg, metrics,
+                           en_iyi_bahis, pazar_t, value_puani, b_ms1, b_x, b_ms2):
+    """Kullanıcının kendi Anthropic API anahtarıyla gerçek bir Claude modelinden
+    doğal, bağlama duyarlı bir maç yorumu üretir. Anahtar hiçbir yere kaydedilmez,
+    sadece bu tek istekte kullanılır. Başarısız olursa çağıran taraf kural tabanlı
+    yoruma otomatik olarak geri döner."""
+    client = anthropic.Anthropic(api_key=api_anahtari)
+
+    en_iyi_skor = metrics.get("en_iyi_skor", (0, 0))
+    value_metni = f"{value_puani:.1f} puan" if value_puani is not None else "hesaplanmadı"
+
+    prompt = f"""Sen deneyimli, ölçülü ve dürüst bir futbol veri analistisin. Aşağıdaki istatistiksel
+model çıktılarına dayanarak Türkçe, akıcı, 3-4 cümlelik tek paragraflık bir maç önizleme yorumu yaz.
+
+Maç: {ev_sahibi} (ev sahibi) - {deplasman} (deplasman)
+Ev xG: {ev_xg:.2f} | Deplasman xG: {dep_xg:.2f}
+MS1 olasılığı: %{metrics['ms1']:.1f} | Beraberlik: %{metrics['x']:.1f} | MS2 olasılığı: %{metrics['ms2']:.1f}
+2.5 Üst olasılığı: %{metrics['ust25']:.1f} | KG Var olasılığı: %{metrics['kg_var']:.1f}
+En olası skor: {en_iyi_skor[0]}-{en_iyi_skor[1]}
+Bülten oranları: MS1 {b_ms1} / X {b_x} / MS2 {b_ms2}
+Modelin önerdiği bahis: {en_iyi_bahis} ({pazar_t})
+Value (oran karşısında model avantajı): {value_metni}
+
+Kurallar:
+- Kesin kazanma garantisi verme, "kesin", "banko" gibi ifadeler kullanma.
+- Sayısal verileri doğal bir dille bağlama otur, listeleme yapma.
+- Value düşükse veya yoksa bunu açıkça belirt, abartma.
+- Sadece yorumu yaz, başlık veya giriş cümlesi ekleme."""
+
+    yanit = client.messages.create(
+        model="claude-sonnet-5",
+        max_tokens=400,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return "".join(block.text for block in yanit.content if hasattr(block, "text")).strip()
 
 
 # --------------------------------------------------------------------------------
@@ -537,6 +663,23 @@ with st.sidebar.expander("📊 Diğer Pazar Oranları (Opsiyonel)", expanded=Fal
         b_kgvar = st.number_input("Bülten Oranı: KG Var", min_value=1.01, value=1.80)
         b_kgyok = st.number_input("Bülten Oranı: KG Yok", min_value=1.01, value=2.00)
 
+with st.sidebar.expander("🧠 Gerçek AI ile Zenginleştir (Opsiyonel)", expanded=False):
+    st.caption(
+        "Varsayılan yorum kural tabanlıdır, internet gerektirmez ve her zaman çalışır. "
+        "İstersen kendi Anthropic API anahtarınla gerçek bir Claude modelinden daha akıcı, "
+        "bağlama duyarlı bir yorum ürettirebilirsin. Anahtarın hiçbir yere kaydedilmez, "
+        "sadece bu oturumda ve tek bir istek için kullanılır."
+    )
+    ai_yorum_aktif = st.checkbox("Claude ile yorum üret", value=False)
+    ai_api_anahtari = ""
+    if ai_yorum_aktif:
+        if not ANTHROPIC_PAKETI_MEVCUT:
+            st.warning("`anthropic` paketi kurulu değil. Terminalde şunu çalıştır: `pip install anthropic`")
+        ai_api_anahtari = st.text_input(
+            "Anthropic API Anahtarı", type="password",
+            help="console.anthropic.com üzerinden alabilirsin. Boş bırakırsan kural tabanlı yoruma dönülür.",
+        )
+
 
 # --------------------------------------------------------------------------------
 # ⚠️ AYNI TAKIM KONTROLÜ
@@ -669,7 +812,7 @@ with sekme1:
 
         if grafik_tipi == "Maç Sonucu":
             fig = go.Figure(data=[go.Pie(labels=['MS1', 'X', 'MS2'],
-                                          values=[ms1_olasilik, x_olasilik, ms2_olasilik], hole=.4,marker_colors=['#22c55e', '#6b7280', '#ef4444'])])
+                                          values=[ms1_olasilik, x_olasilik, ms2_olasilik], hole=.4)])
         elif "Alt/Üst" in grafik_tipi:
             if "1.5" in grafik_tipi:
                 vals = [gol_ust_1_5, gol_alt_1_5]
@@ -701,10 +844,37 @@ with sekme1:
         st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-        st.subheader("🧾 Kural Tabanlı Otomatik Yorum")
-        st.caption("Not: Bu bir yapay zeka/dil modeli çıktısı değildir — sabit kurallara dayalı şablon metindir.")
-        otomatik_yorum = otomatik_yorum_uret(ev_sahibi, deplasman, ev_xg, dep_xg, en_iyi_bahis, value_puani)
-        st.info(otomatik_yorum)
+
+        yorum_kaynagi_ai = False
+        yorum_metni_ai = None
+
+        if ai_yorum_aktif and ANTHROPIC_PAKETI_MEVCUT and ai_api_anahtari:
+            with st.spinner("Claude maçı yorumluyor..."):
+                try:
+                    yorum_metni_ai = claude_ile_yorum_uret(
+                        ai_api_anahtari, ev_sahibi, deplasman, ev_xg, dep_xg, metrics,
+                        en_iyi_bahis, pazar_t, value_puani, b_ms1, b_x, b_ms2,
+                    )
+                    yorum_kaynagi_ai = True
+                except Exception as e:
+                    st.warning(f"AI yorumu üretilemedi ({e}); kural tabanlı yoruma dönülüyor.")
+
+        if yorum_kaynagi_ai:
+            st.subheader("🧠 Claude Maç Yorumu")
+            st.caption("Bu yorum, girdiğin API anahtarıyla gerçek bir Claude modelinden üretildi.")
+            st.markdown(f'<div class="yorum-box"><p>{yorum_metni_ai}</p></div>', unsafe_allow_html=True)
+        else:
+            st.subheader("🧾 Kural Tabanlı Otomatik Yorum")
+            st.caption("Bu bir yapay zeka/dil modeli çıktısı değildir — internet gerektirmeyen, sabit kurallara dayalı bir analiz metnidir.")
+            paragraflar = kural_tabanli_yorum_uret(
+                ev_sahibi, deplasman, ev_xg, dep_xg, ev_ppg, dep_ppg,
+                ev_cs, dep_cs, ev_kritik_eksik, dep_kritik_eksik,
+                ev_normal_eksik, dep_normal_eksik,
+                metrics, en_iyi_bahis, pazar_t, value_puani,
+            )
+            html_govde = "".join(f"<p>{p}</p>" for p in paragraflar)
+            st.markdown(f'<div class="yorum-box">{html_govde}</div>', unsafe_allow_html=True)
+
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col_sag:
