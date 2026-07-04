@@ -812,7 +812,7 @@ with sekme1:
 
         if grafik_tipi == "Maç Sonucu":
             fig = go.Figure(data=[go.Pie(labels=['MS1', 'X', 'MS2'],
-                                          values=[ms1_olasilik, x_olasilik, ms2_olasilik], hole=.4)])
+                                          values=[ms1_olasilik, x_olasilik, ms2_olasilik], hole=.4,marker_colors=['#22c55e', '#6b7280', '#ef4444'])])
         elif "Alt/Üst" in grafik_tipi:
             if "1.5" in grafik_tipi:
                 vals = [gol_ust_1_5, gol_alt_1_5]
