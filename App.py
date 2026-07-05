@@ -130,6 +130,7 @@ def en_iyi_bahsi_belirle(metrics, ev_sahibi, deplasman, b_ms1, b_x, b_ms2,
                           diger_pazar_aktif, b_ust25=None, b_alt25=None,
                           b_kgvar=None, b_kgyok=None,
                           min_value_puani=2.0, min_olasilik=35.0):
+    """Dönüş: (bahis_etiketi, pazar_tipi, value_puani veya None, model_olasiligi veya None)"""
     fair_ms1, fair_x, fair_ms2 = adil_olasiliklar([b_ms1, b_x, b_ms2])
 
     adaylar = [
@@ -150,25 +151,25 @@ def en_iyi_bahsi_belirle(metrics, ev_sahibi, deplasman, b_ms1, b_x, b_ms2,
         gecerli = [a for a in adaylar if a[3] >= min_olasilik and a[0] >= min_value_puani]
         if gecerli:
             en_iyi = max(gecerli, key=lambda a: a[0])
-            return en_iyi[1], en_iyi[2], en_iyi[0]
-        return "RİSKLİ MÜSABAKA (PAS) ⚠️", "Yok", None
+            return en_iyi[1], en_iyi[2], en_iyi[0], en_iyi[3]
+        return "RİSKLİ MÜSABAKA (PAS) ⚠️", "Yok", None, None
 
     # Diğer pazarlar için oran girilmemişse: 1X2'de value ara, yoksa ham olasılık eşiği kullan
     ms_gecerli = [a for a in adaylar if a[3] >= min_olasilik and a[0] >= min_value_puani]
     if ms_gecerli:
         en_iyi = max(ms_gecerli, key=lambda a: a[0])
-        return en_iyi[1], en_iyi[2], en_iyi[0]
+        return en_iyi[1], en_iyi[2], en_iyi[0], en_iyi[3]
 
     if metrics["ust25"] >= 60:
-        return "2.5 Üst", "2.5 Alt/Üst", None
+        return "2.5 Üst", "2.5 Alt/Üst", None, metrics["ust25"]
     if metrics["alt25"] >= 60:
-        return "2.5 Alt", "2.5 Alt/Üst", None
+        return "2.5 Alt", "2.5 Alt/Üst", None, metrics["alt25"]
     if metrics["kg_var"] >= 60:
-        return "Karşılıklı Gol Var (KG Var)", "Karşılıklı Gol", None
+        return "Karşılıklı Gol Var (KG Var)", "Karşılıklı Gol", None, metrics["kg_var"]
     if metrics["kg_yok"] >= 60:
-        return "Karşılıklı Gol Yok (KG Yok)", "Karşılıklı Gol", None
+        return "Karşılıklı Gol Yok (KG Yok)", "Karşılıklı Gol", None, metrics["kg_yok"]
 
-    return "RİSKLİ MÜSABAKA (PAS) ⚠️", "Yok", None
+    return "RİSKLİ MÜSABAKA (PAS) ⚠️", "Yok", None, None
 
 
 # --------------------------------------------------------------------------------
@@ -655,7 +656,7 @@ v_ms1 = ms1_olasilik - fair_ms1
 v_x = x_olasilik - fair_x
 v_ms2 = ms2_olasilik - fair_ms2
 
-en_iyi_bahis, pazar_t, value_puani = en_iyi_bahsi_belirle(
+en_iyi_bahis, pazar_t, value_puani, secim_olasiligi = en_iyi_bahsi_belirle(
     metrics, ev_sahibi, deplasman, b_ms1, b_x, b_ms2,
     diger_pazar_aktif, b_ust25, b_alt25, b_kgvar, b_kgyok,
 )
@@ -671,53 +672,253 @@ if takim_ayni_mi:
     st.error("Ev sahibi ve deplasman takımı aynı görünüyor. Lütfen farklı iki takım seç.")
     st.stop()
 
-m1, m2, m3 = st.columns(3)
-m1.metric("Ev xG oranı", f"{ev_xg:.2f}")
-m2.metric("Dep xG oranı", f"{dep_xg:.2f}")
-m3.metric("Tahmin", en_iyi_bahis.split(" (")[0])
+# --------------------------------------------------------------------------------
+# 🔢 KPI ÖZET SATIRI
+# --------------------------------------------------------------------------------
+k1, k2, k3, k4 = st.columns(4)
+k1.metric("Ev xG", f"{ev_xg:.2f}")
+k2.metric("Deplasman xG", f"{dep_xg:.2f}")
+k3.metric("En Olası Skor", f"{tahmin_ev_skor}-{tahmin_dep_skor}",
+          f"%{metrics['en_iyi_skor_p']:.1f} olasılık", delta_color="off")
+k4.metric("Model Tahmini", en_iyi_bahis.split(" (")[0],
+          f"+{value_puani:.1f} puan value" if value_puani is not None else None)
 
-col_sol, col_sag = st.columns([11, 10])
+# --------------------------------------------------------------------------------
+# 📐 TAKIM KARŞILAŞTIRMA SKORLARI (radar grafiği için 0-100 ölçekli)
+# --------------------------------------------------------------------------------
+def olcek_0_100(deger, min_v, max_v):
+    if max_v == min_v:
+        return 50.0
+    return max(0.0, min(100.0, (deger - min_v) / (max_v - min_v) * 100))
 
-with col_sol:
+hucum_ev = olcek_0_100(ev_xg, 0, 3.0)
+hucum_dep = olcek_0_100(dep_xg, 0, 3.0)
+savunma_ev = 100 - olcek_0_100(ev_ic_savunma_ort, 0, 2.5)
+savunma_dep = 100 - olcek_0_100(dep_dis_savunma_ort, 0, 2.5)
+form_ev = olcek_0_100(ev_ppg, 0, 3.0)
+form_dep = olcek_0_100(dep_ppg, 0, 3.0)
+kadro_ev = 100 - olcek_0_100(ev_kritik_eksik * 2 + ev_normal_eksik, 0, 10)
+kadro_dep = 100 - olcek_0_100(dep_kritik_eksik * 2 + dep_normal_eksik, 0, 10)
+
+radar_kategorileri = ["Hücum", "Savunma", "Form (PPG)", "Kadro Sağlığı"]
+radar_kategorileri_kapali = radar_kategorileri + [radar_kategorileri[0]]
+ev_radar_kapali = [hucum_ev, savunma_ev, form_ev, kadro_ev] + [hucum_ev]
+dep_radar_kapali = [hucum_dep, savunma_dep, form_dep, kadro_dep] + [hucum_dep]
+
+# --------------------------------------------------------------------------------
+# 🎲 SKOR TOPLAMI DAĞILIMI (0,1,2,3,4,5,6,7+ gol olasılıkları — tek grid'den)
+# --------------------------------------------------------------------------------
+_max_toplam = grid.shape[0] + grid.shape[1] - 1
+_dagilim_ham = np.zeros(_max_toplam)
+for _i in range(grid.shape[0]):
+    for _j in range(grid.shape[1]):
+        _dagilim_ham[_i + _j] += grid[_i, _j]
+_esik = 7
+gol_dagilimi_etiket = [str(k) for k in range(_esik)] + [f"{_esik}+"]
+gol_dagilimi_deger = list(_dagilim_ham[:_esik] * 100) + [_dagilim_ham[_esik:].sum() * 100]
+
+st.write("")
+tab_genel, tab_matris, tab_value, tab_yorum = st.tabs(
+    ["📊 Genel Bakış", "🔥 Skor Matrisi", "💰 Value Analizi", "🧠 Yorum"]
+)
+
+# =================================================================================
+# TAB 1 — GENEL BAKIŞ: takım karşılaştırma radarı + 1X2 model/adil olasılık barı
+# =================================================================================
+with tab_genel:
+    col_a, col_b = st.columns(2)
+
+    with col_a:
+        st.markdown('<div class="premium-card">', unsafe_allow_html=True)
+        st.subheader("🧭 Takım Güç Karşılaştırması")
+        st.caption("0-100 ölçeğinde göreceli güç skoru (xG, savunma, form ve kadro sağlığından türetilir).")
+
+        fig_radar = go.Figure()
+        fig_radar.add_trace(go.Scatterpolar(
+            r=ev_radar_kapali, theta=radar_kategorileri_kapali, fill='toself',
+            name=ev_sahibi, line_color='#8b5cf6', fillcolor='rgba(139,92,246,0.25)',
+        ))
+        fig_radar.add_trace(go.Scatterpolar(
+            r=dep_radar_kapali, theta=radar_kategorileri_kapali, fill='toself',
+            name=deplasman, line_color='#f59e0b', fillcolor='rgba(245,158,11,0.20)',
+        ))
+        fig_radar.update_layout(
+            template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)',
+            polar=dict(
+                bgcolor='rgba(0,0,0,0)',
+                radialaxis=dict(visible=True, range=[0, 100], gridcolor='#334155', showticklabels=True),
+                angularaxis=dict(gridcolor='#334155'),
+            ),
+            showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
+            height=380, margin=dict(t=20, b=20, l=50, r=50),
+        )
+        st.plotly_chart(fig_radar, use_container_width=True, key="radar_karsilastirma")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col_b:
+        st.markdown('<div class="premium-card">', unsafe_allow_html=True)
+        st.subheader("⚖️ Maç Sonucu: Model vs. Bülten")
+        st.caption("Model olasılığı ile bülten oranının marjdan arındırılmış (adil) olasılığı yan yana.")
+
+        fig_1x2 = go.Figure()
+        fig_1x2.add_trace(go.Bar(
+            name='Model Olasılığı', x=['MS1', 'X', 'MS2'],
+            y=[ms1_olasilik, x_olasilik, ms2_olasilik],
+            marker_color='#8b5cf6', text=[f"%{v:.1f}" for v in [ms1_olasilik, x_olasilik, ms2_olasilik]],
+            textposition='outside',
+        ))
+        fig_1x2.add_trace(go.Bar(
+            name='Adil Olasılık (Oran)', x=['MS1', 'X', 'MS2'],
+            y=[fair_ms1, fair_x, fair_ms2],
+            marker_color='#475569', text=[f"%{v:.1f}" for v in [fair_ms1, fair_x, fair_ms2]],
+            textposition='outside',
+        ))
+        fig_1x2.update_layout(
+            barmode='group', template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+            height=380, yaxis_title="Olasılık (%)", yaxis_range=[0, 100],
+            legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
+            margin=dict(t=20, b=20, l=40, r=20),
+        )
+        st.plotly_chart(fig_1x2, use_container_width=True, key="bar_1x2")
+        st.markdown('</div>', unsafe_allow_html=True)
+
     st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-    st.subheader("🎯 Profesyonel Olasılık Dağılımı")
+    st.subheader("🥅 Maçtaki Toplam Gol Sayısı Dağılımı")
+    st.caption("Skor matrisinden türetilmiştir; her çubuk o sayıda toplam gol olma olasılığını gösterir.")
+    fig_dagilim = go.Figure(go.Bar(
+        x=gol_dagilimi_etiket, y=gol_dagilimi_deger, marker_color='#3b82f6',
+        text=[f"%{v:.1f}" for v in gol_dagilimi_deger], textposition='outside',
+    ))
+    fig_dagilim.update_layout(
+        template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+        height=300, xaxis_title="Toplam Gol Sayısı", yaxis_title="Olasılık (%)",
+        margin=dict(t=20, b=20, l=40, r=20),
+    )
+    st.plotly_chart(fig_dagilim, use_container_width=True, key="bar_gol_dagilimi")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    grafik_tipi = st.radio("Görünüm:", ["Maç Sonucu", "1.5 Alt/Üst", "2.5 Alt/Üst", "3.5 Alt/Üst", "KG Durumu"],
-                            horizontal=True)
+# =================================================================================
+# TAB 2 — SKOR MATRİSİ: ısı haritası
+# =================================================================================
+with tab_matris:
+    st.markdown('<div class="premium-card">', unsafe_allow_html=True)
+    st.subheader("🔥 Skor Olasılık Isı Haritası")
+    st.caption("Her hücre, o kesin skorun gerçekleşme olasılığını gösterir (Dixon-Coles düzeltmeli Poisson matrisi).")
 
-    if grafik_tipi == "Maç Sonucu":
-        fig = go.Figure(data=[go.Pie(labels=['MS1', 'X', 'MS2'],
-                                      values=[ms1_olasilik, x_olasilik, ms2_olasilik], hole=.4,marker_colors=['#22c55e', '#6b7280', '#ef4444'])])
-    elif "Alt/Üst" in grafik_tipi:
-        if "1.5" in grafik_tipi:
-            vals = [gol_ust_1_5, gol_alt_1_5]
-        elif "2.5" in grafik_tipi:
-            vals = [gol_ust_2_5, gol_alt_2_5]
-        else:
-            vals = [gol_ust_3_5, gol_alt_3_5]
-        fig = go.Figure(data=[go.Pie(labels=['Üst', 'Alt'], values=vals, hole=.4,
-                                      marker_colors=['#0acc31', '#f53333'])])
-    else:
-        fig = go.Figure(data=[go.Pie(labels=['KG Var', 'KG Yok'],
-                                      values=[kg_var_olasilik, 100 - kg_var_olasilik], hole=.4,
-                                      marker_colors=['#0acc31', '#f53333'])])
-
-    fig.update_layout(template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                       height=350, margin=dict(t=30, b=30, l=30, r=30), showlegend=True,
-                       legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5,
-                                   uirevision='constant'))
-    st.plotly_chart(fig, use_container_width=True, key=f"grafik_{grafik_tipi}")
+    _boyut = 6
+    _z = grid[:_boyut, :_boyut] * 100
+    fig_heat = go.Figure(data=go.Heatmap(
+        z=_z,
+        x=[str(j) for j in range(_boyut)],
+        y=[str(i) for i in range(_boyut)],
+        colorscale=[[0, '#0b1329'], [0.5, '#6d28d9'], [1, '#22c55e']],
+        text=np.round(_z, 1),
+        texttemplate="%{text}",
+        textfont={"size": 12, "color": "#f8fafc"},
+        hovertemplate=f"{ev_sahibi}: %{{y}} — {deplasman}: %{{x}}<br>Olasılık: %{{z:.1f}}%<extra></extra>",
+        colorbar=dict(title="Olasılık (%)"),
+    ))
+    fig_heat.update_layout(
+        template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)',
+        height=440,
+        xaxis_title=f"{deplasman} — Gol Sayısı",
+        yaxis_title=f"{ev_sahibi} — Gol Sayısı",
+        margin=dict(t=20, b=40, l=60, r=20),
+    )
+    st.plotly_chart(fig_heat, use_container_width=True, key="heatmap_skor")
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<div class="premium-card">', unsafe_allow_html=True)
     st.caption("En olası skor")
     st.markdown(
         f'<div style="text-align:center; font-size:28px; font-weight:bold; color:#f8fafc;">'
-        f'{ev_sahibi} {tahmin_ev_skor} - {tahmin_dep_skor} {deplasman}</div>',
+        f'{ev_sahibi} {tahmin_ev_skor} - {tahmin_dep_skor} {deplasman}</div>'
+        f'<div style="text-align:center; font-size:13px; color:#94a3b8; margin-top:4px;">'
+        f'~%{metrics["en_iyi_skor_p"]:.1f} olasılıkla (tek bir skor için bu normal bir orandır)</div>',
         unsafe_allow_html=True,
     )
     st.markdown('</div>', unsafe_allow_html=True)
 
+# =================================================================================
+# TAB 3 — VALUE ANALİZİ: sinyal kartları + seçilen bahsin güven göstergesi
+# =================================================================================
+with tab_value:
+    col_c, col_d = st.columns([1, 1])
+
+    with col_c:
+        st.markdown('<div class="premium-card">', unsafe_allow_html=True)
+        st.subheader("🚨 Value Sinyalleri")
+        st.caption("Value = Model olasılığı − bülten oranının marjdan arındırılmış (adil) olasılığı.")
+
+        def sinyal_satiri(pazar, model_p, oran, value):
+            renk = "#10b981" if value > 0 else "#ef4444"
+            yuzde = min(abs(value) * 10, 100)
+            st.markdown(f"""
+            <div style="background: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 10px; margin-bottom: 8px; border: 1px solid #1e293b;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span style="font-weight: 600; color: #f8fafc;">{pazar}</span>
+                    <span style="color: {renk}; font-weight: bold;">{value:+.2f}</span>
+                </div>
+                <div style="font-size: 11px; color: #64748b; margin-bottom: 5px;">Model: %{model_p:.1f} | Oran: {oran}</div>
+                <div style="width: 100%; background: #334155; height: 4px; border-radius: 2px;">
+                    <div style="width: {yuzde}%; background: {renk}; height: 4px; border-radius: 2px;"></div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        sinyal_satiri(f"MS 1 ({ev_sahibi})", ms1_olasilik, b_ms1, v_ms1)
+        sinyal_satiri("Beraberlik (X)", x_olasilik, b_x, v_x)
+        sinyal_satiri(f"MS 2 ({deplasman})", ms2_olasilik, b_ms2, v_ms2)
+
+        if diger_pazar_aktif:
+            fair_ust25, fair_alt25 = adil_olasiliklar([b_ust25, b_alt25])
+            fair_kgvar, fair_kgyok = adil_olasiliklar([b_kgvar, b_kgyok])
+            sinyal_satiri("2.5 Üst", metrics["ust25"], b_ust25, metrics["ust25"] - fair_ust25)
+            sinyal_satiri("2.5 Alt", metrics["alt25"], b_alt25, metrics["alt25"] - fair_alt25)
+            sinyal_satiri("KG Var", metrics["kg_var"], b_kgvar, metrics["kg_var"] - fair_kgvar)
+            sinyal_satiri("KG Yok", metrics["kg_yok"], b_kgyok, metrics["kg_yok"] - fair_kgyok)
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col_d:
+        st.markdown('<div class="premium-card">', unsafe_allow_html=True)
+        st.subheader("🎯 Seçilen Bahsin Güven Göstergesi")
+
+        if secim_olasiligi is not None:
+            fig_gauge = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=secim_olasiligi,
+                number={'suffix': "%"},
+                title={'text': en_iyi_bahis.split(" (")[0], 'font': {'size': 16}},
+                gauge={
+                    'axis': {'range': [0, 100], 'tickcolor': '#94a3b8'},
+                    'bar': {'color': '#8b5cf6'},
+                    'bgcolor': 'rgba(0,0,0,0)',
+                    'steps': [
+                        {'range': [0, 35], 'color': '#1e293b'},
+                        {'range': [35, 60], 'color': '#334155'},
+                        {'range': [60, 100], 'color': '#475569'},
+                    ],
+                },
+            ))
+            fig_gauge.update_layout(
+                template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', height=300,
+                margin=dict(t=50, b=10, l=30, r=30), font={'color': '#f8fafc'},
+            )
+            st.plotly_chart(fig_gauge, use_container_width=True, key="gauge_guven")
+            if value_puani is not None:
+                st.caption(f"Bu seçim, bülten oranının ima ettiği adil olasılığa göre ~{value_puani:.1f} puanlık bir value taşıyor.")
+            else:
+                st.caption("Bu seçim ham model olasılığına dayanıyor; bu pazar için value hesaplanmadı.")
+        else:
+            st.info("Model şu an hiçbir pazarda yeterince güçlü bir sinyal bulamadı — temkinli olmakta fayda var (PAS).")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# =================================================================================
+# TAB 4 — YORUM: kural tabanlı ya da gerçek Claude yorumu + indirme
+# =================================================================================
+with tab_yorum:
     st.markdown('<div class="premium-card">', unsafe_allow_html=True)
 
     yorum_kaynagi_ai = False
@@ -749,41 +950,6 @@ with col_sol:
         )
         html_govde = "".join(f"<p>{p}</p>" for p in paragraflar)
         st.markdown(f'<div class="yorum-box">{html_govde}</div>', unsafe_allow_html=True)
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with col_sag:
-    st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-    st.subheader("🚨 Tahmin & Value Sinyalleri")
-    st.caption("Value = Model olasılığı − bülten oranının marjdan arındırılmış (adil) olasılığı.")
-
-    def sinyal_satiri(pazar, model_p, oran, value):
-        renk = "#10b981" if value > 0 else "#ef4444"
-        yuzde = min(abs(value) * 10, 100)
-        st.markdown(f"""
-        <div style="background: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 10px; margin-bottom: 8px; border: 1px solid #1e293b;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                <span style="font-weight: 600; color: #f8fafc;">{pazar}</span>
-                <span style="color: {renk}; font-weight: bold;">{value:+.2f}</span>
-            </div>
-            <div style="font-size: 11px; color: #64748b; margin-bottom: 5px;">Model: %{model_p:.1f} | Oran: {oran}</div>
-            <div style="width: 100%; background: #334155; height: 4px; border-radius: 2px;">
-                <div style="width: {yuzde}%; background: {renk}; height: 4px; border-radius: 2px;"></div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    sinyal_satiri(f"MS 1 ({ev_sahibi})", ms1_olasilik, b_ms1, v_ms1)
-    sinyal_satiri("Beraberlik (X)", x_olasilik, b_x, v_x)
-    sinyal_satiri(f"MS 2 ({deplasman})", ms2_olasilik, b_ms2, v_ms2)
-
-    if diger_pazar_aktif:
-        fair_ust25, fair_alt25 = adil_olasiliklar([b_ust25, b_alt25])
-        fair_kgvar, fair_kgyok = adil_olasiliklar([b_kgvar, b_kgyok])
-        sinyal_satiri("2.5 Üst", metrics["ust25"], b_ust25, metrics["ust25"] - fair_ust25)
-        sinyal_satiri("2.5 Alt", metrics["alt25"], b_alt25, metrics["alt25"] - fair_alt25)
-        sinyal_satiri("KG Var", metrics["kg_var"], b_kgvar, metrics["kg_var"] - fair_kgvar)
-        sinyal_satiri("KG Yok", metrics["kg_yok"], b_kgyok, metrics["kg_yok"] - fair_kgyok)
 
     st.markdown('</div>', unsafe_allow_html=True)
 
