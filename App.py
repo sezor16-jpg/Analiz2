@@ -124,6 +124,29 @@ def adil_olasiliklar(oranlar):
 
 
 # --------------------------------------------------------------------------------
+# 🎓 BAYESIAN KÜÇÜLTME (SHRINKAGE) — AZ MAÇLI VERİYİ AŞIRI YORUMLAMAYI ÖNLER
+# --------------------------------------------------------------------------------
+def bayes_shrink(gozlemlenen_oran, n, oncul_oran, k):
+    """Empirical Bayes / regresyon-to-mean tekniği: az sayıda maça (küçük n) dayanan
+    ham bir ortalama, aslında büyük ölçüde şans eseri olabilir (örn. 1 maçta 3 gol atmak,
+    'maç başına 3 gol atan takım' anlamına gelmez). Bu fonksiyon, gözlemi n arttıkça daha
+    çok, azaldıkça daha az ağırlıklandırıp bir "öncül" (prior) değere doğru çeker.
+    k = kaç "hayali maç" kadar önceliğe güvenileceği (k=0 -> hiç küçültme yok, ham veri).
+    n çok büyükse (kalabalık örneklem) sonuç zaten gözlenen orana yakınsar."""
+    if k <= 0:
+        return gozlemlenen_oran
+    return (n / (n + k)) * gozlemlenen_oran + (k / (n + k)) * oncul_oran
+
+
+def veri_guvenilirlik_skoru(*mac_sayilari, tam_guven_esigi=40):
+    """Tahminin dayandığı toplam maç sayısına göre 0-100 arası bir güvenilirlik skoru
+    üretir. Az veri = düşük güven; bu skor arayüzde şeffafça gösterilir ve strateji
+    motorunun ne kadar temkinli davranacağını da etkiler."""
+    toplam = sum(mac_sayilari)
+    return max(0.0, min(100.0, (toplam / tam_guven_esigi) * 100))
+
+
+# --------------------------------------------------------------------------------
 # 🧠 STRATEJİ MOTORU: EN İYİ BAHSİ BELİRLE (value + olasılık eşiği birlikte)
 # --------------------------------------------------------------------------------
 def en_iyi_bahsi_belirle(metrics, ev_sahibi, deplasman, b_ms1, b_x, b_ms2,
@@ -184,7 +207,7 @@ def en_iyi_bahsi_belirle(metrics, ev_sahibi, deplasman, b_ms1, b_x, b_ms2,
 def kural_tabanli_yorum_uret(ev_sahibi, deplasman, ev_xg, dep_xg, ev_ppg, dep_ppg,
                               ev_cs, dep_cs, ev_kritik_eksik, dep_kritik_eksik,
                               ev_normal_eksik, dep_normal_eksik,
-                              metrics, en_iyi_bahis, pazar_t, value_puani):
+                              metrics, en_iyi_bahis, pazar_t, value_puani, veri_guveni=100.0):
 
     # --- 1) GİRİŞ + GENEL GÜÇ DENGESİ ---
     girisler = [
@@ -283,7 +306,16 @@ def kural_tabanli_yorum_uret(ev_sahibi, deplasman, ev_xg, dep_xg, ev_ppg, dep_pp
         "Futbolun sürpriz doğası gereği, düşük olasılıklı sonuçlar da gerçekleşebilir — bankoya oynama.",
         "Model geçmiş verilere dayanır; sakatlık, taktik değişikliği gibi son dakika gelişmelerini her zaman yakalayamayabilir.",
     ]
-    paragraf_4 = f"{random.choice(kapanislar)} (Tahmin: {en_iyi_bahis})"
+
+    if veri_guveni < 35:
+        guven_notu = (f" Ayrıca bu analiz nispeten az sayıda maça dayanıyor (veri güvenilirliği ~%{veri_guveni:.0f}); "
+                      f"model bu yüzden zaten daha temkinli bir eşik kullandı, ama yine de ihtiyatlı ol.")
+    elif veri_guveni < 70:
+        guven_notu = f" Veri güvenilirliği orta seviyede (~%{veri_guveni:.0f}) — daha fazla maç verisiyle tahmin netleşebilir."
+    else:
+        guven_notu = ""
+
+    paragraf_4 = f"{random.choice(kapanislar)}{guven_notu} (Tahmin: {en_iyi_bahis})"
 
     return [paragraf_1, paragraf_2, paragraf_3, paragraf_4]
 
@@ -482,6 +514,33 @@ with st.sidebar.expander("🌍 Lig & Ağırlıklandırma", expanded=False):
              "0'a yakın değer, bağımsız Poisson varsayımına (v8.0 davranışı) döner."
     )
 
+with st.sidebar.expander("🎓 Gelişmiş İstatistik Ayarları (Bayesian Düzeltme)", expanded=False):
+    st.caption(
+        "Az sayıda maça dayanan ortalamalar (ör. 1 iç saha maçında 3 gol atmak) çoğu zaman "
+        "şans eseridir. Bu ayarlar, az veriye dayanan oranları daha güvenilir bir referansa "
+        "doğru hafifçe çeker — veri arttıkça bu etki otomatik olarak azalır. 0 = düzeltme yok "
+        "(ham veri, v9/v10 davranışı)."
+    )
+    k_genel = st.slider("Sezon Ortalaması Düzeltme Gücü (k)", 0, 15, 4,
+                         help="Sezon geneli hücum/savunma ortalamalarını lig ortalamasına doğru çeker.")
+    k_saha = st.slider("İç/Dış Saha Ortalaması Düzeltme Gücü (k)", 0, 15, 3,
+                        help="İç veya dış sahaya özel ortalamaları, takımın sezon geneline doğru çeker.")
+    k_form = st.slider("Son 5 Maç (Form) Düzeltme Gücü (k)", 0, 15, 3,
+                        help="5 maçlık form verisini, takımın saha-özel ortalamasına doğru çeker.")
+
+with st.sidebar.expander("📡 Piyasa ile Harmanlama (Opsiyonel)", expanded=False):
+    st.caption(
+        "Bülten oranları genelde sakatlık/iç bilgi gibi modelin göremediği unsurları da "
+        "fiyatlar. İstersen model olasılığını piyasanın adil olasılığıyla harmanlayarak "
+        "daha dengeli bir nihai tahmin elde edebilirsin. Value hesabı yine SAF model "
+        "olasılığından yapılır; harman sadece nihai tahmini etkiler."
+    )
+    piyasa_harman_aktif = st.checkbox("Maç Sonucu (1X2) tahminini piyasa ile harmanla", value=False)
+    piyasa_agirligi = 0.0
+    if piyasa_harman_aktif:
+        piyasa_agirligi = st.slider("Piyasa Ağırlığı (%)", 0, 50, 20,
+                                     help="0% = saf model, 50% = model ve piyasaya eşit ağırlık.") / 100
+
 with st.sidebar.expander("🏠 Ev Sahibi İstatistikleri", expanded=False):
     ev_ic_mac = st.number_input("İç Sahada Oynadığı Maç", min_value=1, value=1)
     ev_ic_puan = st.number_input("İç Sahada Topladığı Puan", min_value=0, value=1)
@@ -568,22 +627,46 @@ takim_ayni_mi = (
 
 
 # --------------------------------------------------------------------------------
-# ⚙️ xG HESAP MOTORU (v8.0 ile aynı mantık, sadeleştirilmiş)
+# ⚙️ xG HESAP MOTORU (Bayesian küçültme ile güçlendirilmiş)
 # --------------------------------------------------------------------------------
-ev_ic_hucum_ort = ev_toplam_gol / ev_ic_mac
-ev_ic_savunma_ort = ev_toplam_yenen / ev_ic_mac
-dep_dis_hucum_ort = dep_toplam_gol / dep_dis_mac
-dep_dis_savunma_ort = dep_toplam_yenen / dep_dis_mac
+yarim_lig_ort = lig_ort_gol / 2  # shrinkage önculleri için erken hesaplanıyor
 
-ev_son5_hucum_ort = ev_son5_attigi / 5
-ev_son5_savunma_ort = ev_son5_yedigi / 5
-dep_son5_hucum_ort = dep_son5_attigi / 5
-dep_son5_savunma_ort = dep_son5_yedigi / 5
+# --- HAM (düzeltilmemiş) oranlar ---
+ev_ic_hucum_ort_ham = ev_toplam_gol / ev_ic_mac
+ev_ic_savunma_ort_ham = ev_toplam_yenen / ev_ic_mac
+dep_dis_hucum_ort_ham = dep_toplam_gol / dep_dis_mac
+dep_dis_savunma_ort_ham = dep_toplam_yenen / dep_dis_mac
 
-ev_genel_hucum_ort = ev_genel_attigi / ev_genel_mac
-ev_genel_savunma_ort = ev_genel_yedigi / ev_genel_mac
-dep_genel_hucum_ort = dep_genel_attigi / dep_genel_mac
-dep_genel_savunma_ort = dep_genel_yedigi / dep_genel_mac
+ev_son5_hucum_ort_ham = ev_son5_attigi / 5
+ev_son5_savunma_ort_ham = ev_son5_yedigi / 5
+dep_son5_hucum_ort_ham = dep_son5_attigi / 5
+dep_son5_savunma_ort_ham = dep_son5_yedigi / 5
+
+ev_genel_hucum_ort_ham = ev_genel_attigi / ev_genel_mac
+ev_genel_savunma_ort_ham = ev_genel_yedigi / ev_genel_mac
+dep_genel_hucum_ort_ham = dep_genel_attigi / dep_genel_mac
+dep_genel_savunma_ort_ham = dep_genel_yedigi / dep_genel_mac
+
+# --- 1. KADEME: Sezon geneli oranlar, lig ortalamasına doğru küçültülür ---
+ev_genel_hucum_ort = bayes_shrink(ev_genel_hucum_ort_ham, ev_genel_mac, yarim_lig_ort, k_genel)
+ev_genel_savunma_ort = bayes_shrink(ev_genel_savunma_ort_ham, ev_genel_mac, yarim_lig_ort, k_genel)
+dep_genel_hucum_ort = bayes_shrink(dep_genel_hucum_ort_ham, dep_genel_mac, yarim_lig_ort, k_genel)
+dep_genel_savunma_ort = bayes_shrink(dep_genel_savunma_ort_ham, dep_genel_mac, yarim_lig_ort, k_genel)
+
+# --- 2. KADEME: Saha-özel (iç/dış) oranlar, düzeltilmiş sezon ortalamasına doğru küçültülür ---
+ev_ic_hucum_ort = bayes_shrink(ev_ic_hucum_ort_ham, ev_ic_mac, ev_genel_hucum_ort, k_saha)
+ev_ic_savunma_ort = bayes_shrink(ev_ic_savunma_ort_ham, ev_ic_mac, ev_genel_savunma_ort, k_saha)
+dep_dis_hucum_ort = bayes_shrink(dep_dis_hucum_ort_ham, dep_dis_mac, dep_genel_hucum_ort, k_saha)
+dep_dis_savunma_ort = bayes_shrink(dep_dis_savunma_ort_ham, dep_dis_mac, dep_genel_savunma_ort, k_saha)
+
+# --- 3. KADEME: Son 5 maç (form), düzeltilmiş saha-özel ortalamaya doğru küçültülür ---
+ev_son5_hucum_ort = bayes_shrink(ev_son5_hucum_ort_ham, 5, ev_ic_hucum_ort, k_form)
+ev_son5_savunma_ort = bayes_shrink(ev_son5_savunma_ort_ham, 5, ev_ic_savunma_ort, k_form)
+dep_son5_hucum_ort = bayes_shrink(dep_son5_hucum_ort_ham, 5, dep_dis_hucum_ort, k_form)
+dep_son5_savunma_ort = bayes_shrink(dep_son5_savunma_ort_ham, 5, dep_dis_savunma_ort, k_form)
+
+# --- Veri güvenilirlik skoru (arayüzde gösterilir, strateji eşiğini de etkiler) ---
+veri_guveni = veri_guvenilirlik_skoru(ev_ic_mac, dep_dis_mac, ev_genel_mac, dep_genel_mac)
 
 ev_dinamik_ic_hucum = (ev_ic_hucum_ort * sezon_agirligi) + (ev_son5_hucum_ort * form_agirligi)
 ev_dinamik_ic_savunma = (ev_ic_savunma_ort * sezon_agirligi) + (ev_son5_savunma_ort * form_agirligi)
@@ -593,7 +676,6 @@ dep_dinamik_dis_savunma = (dep_dis_savunma_ort * sezon_agirligi) + (dep_son5_sav
 ev_dinamik_ic_savunma *= (1.0 - (ev_cs * 0.03))
 dep_dinamik_dis_savunma *= (1.0 - (dep_cs * 0.03))
 
-yarim_lig_ort = lig_ort_gol / 2
 ev_ic_hucum_katsayi = ev_dinamik_ic_hucum / max(yarim_lig_ort, 0.1)
 dep_dis_savunma_katsayi = dep_dinamik_dis_savunma / max(yarim_lig_ort, 0.1)
 dep_dis_hucum_katsayi = dep_dinamik_dis_hucum / max(yarim_lig_ort, 0.1)
@@ -656,9 +738,27 @@ v_ms1 = ms1_olasilik - fair_ms1
 v_x = x_olasilik - fair_x
 v_ms2 = ms2_olasilik - fair_ms2
 
+# --- Opsiyonel piyasa harmanlaması (sadece NİHAİ tahmin için; value hesabı saf modelden) ---
+if piyasa_harman_aktif and piyasa_agirligi > 0:
+    harman_ms1 = (1 - piyasa_agirligi) * ms1_olasilik + piyasa_agirligi * fair_ms1
+    harman_x = (1 - piyasa_agirligi) * x_olasilik + piyasa_agirligi * fair_x
+    harman_ms2 = (1 - piyasa_agirligi) * ms2_olasilik + piyasa_agirligi * fair_ms2
+    _harman_toplam = harman_ms1 + harman_x + harman_ms2
+    if _harman_toplam > 0:
+        harman_ms1, harman_x, harman_ms2 = (v / _harman_toplam * 100 for v in (harman_ms1, harman_x, harman_ms2))
+else:
+    harman_ms1, harman_x, harman_ms2 = ms1_olasilik, x_olasilik, ms2_olasilik
+
+# --- Veri güvenilirliği düştükçe strateji motoru daha temkinli davranır ---
+# (az veri = daha yüksek value/olasılık eşiği aranır; 0 güven -> +3 puan, tam güven -> +0 puan)
+_guven_ek_esik = (100 - veri_guveni) / 100 * 3.0
+_dinamik_min_value = 2.0 + _guven_ek_esik
+_dinamik_min_olasilik = 35.0 + (_guven_ek_esik * 2)
+
 en_iyi_bahis, pazar_t, value_puani, secim_olasiligi = en_iyi_bahsi_belirle(
     metrics, ev_sahibi, deplasman, b_ms1, b_x, b_ms2,
     diger_pazar_aktif, b_ust25, b_alt25, b_kgvar, b_kgyok,
+    min_value_puani=_dinamik_min_value, min_olasilik=_dinamik_min_olasilik,
 )
 
 
@@ -675,13 +775,21 @@ if takim_ayni_mi:
 # --------------------------------------------------------------------------------
 # 🔢 KPI ÖZET SATIRI
 # --------------------------------------------------------------------------------
-k1, k2, k3, k4 = st.columns(4)
+k1, k2, k3, k4, k5 = st.columns(5)
 k1.metric("Ev xG", f"{ev_xg:.2f}")
 k2.metric("Deplasman xG", f"{dep_xg:.2f}")
 k3.metric("En Olası Skor", f"{tahmin_ev_skor}-{tahmin_dep_skor}",
           f"%{metrics['en_iyi_skor_p']:.1f} olasılık", delta_color="off")
 k4.metric("Model Tahmini", en_iyi_bahis.split(" (")[0],
           f"+{value_puani:.1f} puan value" if value_puani is not None else None)
+_guven_etiket = "Yüksek" if veri_guveni >= 70 else ("Orta" if veri_guveni >= 35 else "Düşük")
+k5.metric("Veri Güvenilirliği", f"%{veri_guveni:.0f}", _guven_etiket, delta_color="off")
+if veri_guveni < 35:
+    st.warning(
+        "⚠️ Bu analiz az sayıda maça dayanıyor (düşük veri güvenilirliği). Model, bu durumda "
+        "bilinçli olarak daha temkinli davranıyor (daha yüksek value/olasılık eşiği arıyor), "
+        "ama sonucu yine de ihtiyatla değerlendir."
+    )
 
 # --------------------------------------------------------------------------------
 # 📐 TAKIM KARŞILAŞTIRMA SKORLARI (radar grafiği için 0-100 ölçekli)
@@ -773,6 +881,13 @@ with tab_genel:
             marker_color='#475569', text=[f"%{v:.1f}" for v in [fair_ms1, fair_x, fair_ms2]],
             textposition='outside',
         ))
+        if piyasa_harman_aktif and piyasa_agirligi > 0:
+            fig_1x2.add_trace(go.Bar(
+                name=f'Harman (%{int(piyasa_agirligi*100)} piyasa)', x=['MS1', 'X', 'MS2'],
+                y=[harman_ms1, harman_x, harman_ms2],
+                marker_color='#22c55e', text=[f"%{v:.1f}" for v in [harman_ms1, harman_x, harman_ms2]],
+                textposition='outside',
+            ))
         fig_1x2.update_layout(
             barmode='group', template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
             height=380, yaxis_title="Olasılık (%)", yaxis_range=[0, 100],
@@ -796,6 +911,32 @@ with tab_genel:
     )
     st.plotly_chart(fig_dagilim, use_container_width=True, key="bar_gol_dagilimi")
     st.markdown('</div>', unsafe_allow_html=True)
+
+    with st.expander("🔍 Model Şeffaflığı: Ham Veri vs. Bayesian Düzeltme"):
+        st.caption(
+            "Az sayıda maça dayanan ham ortalamalar şans eserini abartabilir. Sidebar'daki "
+            "Bayesian düzeltme, bu oranları veri arttıkça daha az, azaldıkça daha çok "
+            "güvenilir bir referansa doğru çekiyor. Aşağıda bu düzeltmenin öncesi/sonrası var."
+        )
+        seffaflik_df = pd.DataFrame({
+            "Metrik": [
+                f"{ev_sahibi} — İç Saha Hücum", f"{ev_sahibi} — İç Saha Savunma",
+                f"{ev_sahibi} — Son 5 Hücum", f"{ev_sahibi} — Son 5 Savunma",
+                f"{deplasman} — Dış Saha Hücum", f"{deplasman} — Dış Saha Savunma",
+                f"{deplasman} — Son 5 Hücum", f"{deplasman} — Son 5 Savunma",
+            ],
+            "Ham (Gözlenen)": [
+                ev_ic_hucum_ort_ham, ev_ic_savunma_ort_ham, ev_son5_hucum_ort_ham, ev_son5_savunma_ort_ham,
+                dep_dis_hucum_ort_ham, dep_dis_savunma_ort_ham, dep_son5_hucum_ort_ham, dep_son5_savunma_ort_ham,
+            ],
+            "Bayesian Düzeltilmiş": [
+                ev_ic_hucum_ort, ev_ic_savunma_ort, ev_son5_hucum_ort, ev_son5_savunma_ort,
+                dep_dis_hucum_ort, dep_dis_savunma_ort, dep_son5_hucum_ort, dep_son5_savunma_ort,
+            ],
+        })
+        seffaflik_df["Ham (Gözlenen)"] = seffaflik_df["Ham (Gözlenen)"].round(2)
+        seffaflik_df["Bayesian Düzeltilmiş"] = seffaflik_df["Bayesian Düzeltilmiş"].round(2)
+        st.dataframe(seffaflik_df, use_container_width=True, hide_index=True)
 
 # =================================================================================
 # TAB 2 — SKOR MATRİSİ: ısı haritası
@@ -946,7 +1087,7 @@ with tab_yorum:
             ev_sahibi, deplasman, ev_xg, dep_xg, ev_ppg, dep_ppg,
             ev_cs, dep_cs, ev_kritik_eksik, dep_kritik_eksik,
             ev_normal_eksik, dep_normal_eksik,
-            metrics, en_iyi_bahis, pazar_t, value_puani,
+            metrics, en_iyi_bahis, pazar_t, value_puani, veri_guveni,
         )
         html_govde = "".join(f"<p>{p}</p>" for p in paragraflar)
         st.markdown(f'<div class="yorum-box">{html_govde}</div>', unsafe_allow_html=True)
