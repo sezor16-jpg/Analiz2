@@ -705,8 +705,30 @@ dep_hucum_cezasi = min((dep_kritik_eksik * 0.06) + (dep_normal_eksik * 0.02), 0.
 ev_savunma_zafiyeti = min((ev_kritik_eksik * 0.04) + (ev_normal_eksik * 0.015), 0.20)
 dep_savunma_zafiyeti = min((dep_kritik_eksik * 0.04) + (dep_normal_eksik * 0.015), 0.20)
 
-ev_xg = ((ev_ic_xg * 0.5) + (ev_genel_xg * 0.5))
-dep_xg = ((dep_dis_xg * 0.5) + (dep_genel_xg * 0.5))
+# --------------------------------------------------------------------------------
+# ⚖️ GÜVENİLİRLİK-AĞIRLIKLI HARMAN (ÖNEMLİ DÜZELTME)
+# -------------------------------------------------------------------------------
+# ESKİ DAVRANIŞ (hatalıydı): ic/dis-özel xG ile genel-sezon xG hep sabit %50/%50
+# ağırlıkla harmanlanıyordu. Kullanıcı "Genel Lig İstatistikleri" bölümünü boş/
+# varsayılan (1 maç, 1 gol) bırakırsa, bu bölüm HER İKİ takım için de neredeyse
+# birebir aynı sayıya yakınsıyordu ve gerçek iç/dış saha farkını %50 oranında
+# anlamsız bir "ortalamaya doğru çekme" ile sulandırıyordu — bu da tahminlerin
+# sürekli 1-1 / 1-0 gibi düşük, birbirine yakın skorlarda toplanmasına yol açıyordu.
+#
+# YENİ DAVRANIŞ: Genel-sezon bileşeninin ağırlığı, o bölümün ne kadar GERÇEK veriyle
+# desteklendiğine göre otomatik ayarlanır (kaç maça dayandığına bakılır). Doldurulmamışsa
+# (n=1, varsayılan) ağırlığı neredeyse sıfıra iner; iyi doldurulmuşsa (çok maç) anlamlı
+# ama yine de iç/dış saha sinyalini asla domine etmeyecek şekilde (tavan %40) katkı sağlar.
+# --------------------------------------------------------------------------------
+def genel_agirligi_hesapla(genel_mac, k=k_genel, tavan=0.40):
+    guven = genel_mac / (genel_mac + max(k, 0.5))
+    return tavan * guven
+
+_ev_genel_agirlik = genel_agirligi_hesapla(ev_genel_mac)
+_dep_genel_agirlik = genel_agirligi_hesapla(dep_genel_mac)
+
+ev_xg = (ev_ic_xg * (1 - _ev_genel_agirlik)) + (ev_genel_xg * _ev_genel_agirlik)
+dep_xg = (dep_dis_xg * (1 - _dep_genel_agirlik)) + (dep_genel_xg * _dep_genel_agirlik)
 
 ev_xg *= puan_denge_carpan * ev_onem_carpan
 dep_xg *= (2.0 - puan_denge_carpan) * dep_onem_carpan
