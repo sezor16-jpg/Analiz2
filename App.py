@@ -763,83 +763,215 @@ en_iyi_bahis, pazar_t, value_puani, secim_olasiligi = en_iyi_bahsi_belirle(
 
 
 # --------------------------------------------------------------------------------
-# 📊 ANALİZ EKRANI
+# 🎨 SADE ARAYÜZ İÇİN EK CSS (büyük puntolu, tek bakışta okunur kartlar)
 # --------------------------------------------------------------------------------
-st.markdown('<div class="badge">SEZGİN GÖRMÜŞ VERİ ANALİZİ v10.0</div>', unsafe_allow_html=True)
-st.title("📊 Matematiksel Tahmin Robotu")
+st.markdown("""
+<style>
+.tahmin-kutusu {
+    background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%);
+    border-radius: 18px; padding: 26px; text-align: center; margin-bottom: 18px;
+    border: 2px solid #a78bfa;
+}
+.tahmin-kutusu .etiket { font-size: 15px; color: #ede9fe; font-weight: 600; letter-spacing: 1px; }
+.tahmin-kutusu .deger { font-size: 34px; color: #ffffff; font-weight: 900; margin: 6px 0; line-height: 1.15; }
+.tahmin-kutusu .alt-not { font-size: 14px; color: #ddd6fe; }
+.buyuk-kart {
+    background: #0f172a; border: 1px solid #334155; border-radius: 16px;
+    padding: 18px; text-align: center; height: 100%;
+}
+.buyuk-kart .baslik { font-size: 14px; color: #94a3b8; font-weight: 600; margin-bottom: 6px; }
+.buyuk-kart .yuzde { font-size: 38px; font-weight: 900; line-height: 1.1; }
+.buyuk-kart .isim { font-size: 13px; color: #cbd5e1; margin-top: 2px; }
+.skor-kutusu {
+    background: linear-gradient(90deg, #1e1b4b 0%, #311042 100%);
+    border: 2px dashed #8b5cf6; border-radius: 16px; padding: 20px;
+    text-align: center; margin: 18px 0;
+}
+.skor-kutusu .skor-buyuk { font-size: 44px; font-weight: 900; color: #f8fafc; }
+.skor-kutusu .skor-alt { font-size: 13px; color: #c4b5fd; margin-top: 4px; }
+.guven-rozet {
+    display: inline-block; padding: 6px 16px; border-radius: 999px;
+    font-weight: 700; font-size: 14px; margin-top: 10px;
+}
+</style>
+""", unsafe_allow_html=True)
 
-if takim_ayni_mi:
-    st.error("Ev sahibi ve deplasman takımı aynı görünüyor. Lütfen farklı iki takım seç.")
-    st.stop()
+st.title(f"⚽ {ev_sahibi} 🆚 {deplasman}")
 
 # --------------------------------------------------------------------------------
-# 🔢 KPI ÖZET SATIRI
+# 🔥 BÜYÜK TAHMİN KUTUSU — bayideki adamın ilk göreceği şey
 # --------------------------------------------------------------------------------
-k1, k2, k3, k4, k5 = st.columns(5)
-k1.metric("Ev xG", f"{ev_xg:.2f}")
-k2.metric("Deplasman xG", f"{dep_xg:.2f}")
-k3.metric("En Olası Skor", f"{tahmin_ev_skor}-{tahmin_dep_skor}",
-          f"%{metrics['en_iyi_skor_p']:.1f} olasılık", delta_color="off")
-k4.metric("Model Tahmini", en_iyi_bahis.split(" (")[0],
-          f"+{value_puani:.1f} puan value" if value_puani is not None else None)
-_guven_etiket = "Yüksek" if veri_guveni >= 70 else ("Orta" if veri_guveni >= 35 else "Düşük")
-k5.metric("Veri Güvenilirliği", f"%{veri_guveni:.0f}", _guven_etiket, delta_color="off")
+if en_iyi_bahis.startswith("RİSKLİ"):
+    st.markdown(f"""
+    <div class="tahmin-kutusu" style="background: linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%); border-color:#f87171;">
+        <div class="etiket">🚨 MODELİN ÖNERİSİ</div>
+        <div class="deger">RİSKLİ MAÇ — PAS GEÇ</div>
+        <div class="alt-not">Hiçbir pazarda yeterince güçlü bir sinyal yok. Zorlama.</div>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    _guven_renk = "#22c55e" if (secim_olasiligi or 0) >= 60 else ("#f59e0b" if (secim_olasiligi or 0) >= 40 else "#ef4444")
+    _guven_yazi = "GÜÇLÜ" if (secim_olasiligi or 0) >= 60 else ("ORTA" if (secim_olasiligi or 0) >= 40 else "ZAYIF")
+    _olasilik_metni = f"%{secim_olasiligi:.0f} olasılık" if secim_olasiligi is not None else ""
+    st.markdown(f"""
+    <div class="tahmin-kutusu">
+        <div class="etiket">🔥 EN İYİ TAHMİN</div>
+        <div class="deger">{en_iyi_bahis.split(" (")[0]}</div>
+        <div class="alt-not">{_olasilik_metni}</div>
+        <div class="guven-rozet" style="background:{_guven_renk}22; color:{_guven_renk}; border:1px solid {_guven_renk};">
+            {_guven_yazi} SİNYAL
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
 if veri_guveni < 35:
-    st.warning(
-        "⚠️ Bu analiz az sayıda maça dayanıyor (düşük veri güvenilirliği). Model, bu durumda "
-        "bilinçli olarak daha temkinli davranıyor (daha yüksek value/olasılık eşiği arıyor), "
-        "ama sonucu yine de ihtiyatla değerlendir."
-    )
+    st.warning("⚠️ Bu maç için az veri girdin — tahmin daha az güvenilir. Elinden geldiğince gerçek istatistik gir.")
 
 # --------------------------------------------------------------------------------
-# 📐 TAKIM KARŞILAŞTIRMA SKORLARI (radar grafiği için 0-100 ölçekli)
+# 🟢🟡🔴 MAÇ SONUCU — büyük, renkli, tek bakışta
 # --------------------------------------------------------------------------------
-def olcek_0_100(deger, min_v, max_v):
-    if max_v == min_v:
-        return 50.0
-    return max(0.0, min(100.0, (deger - min_v) / (max_v - min_v) * 100))
-
-hucum_ev = olcek_0_100(ev_xg, 0, 3.0)
-hucum_dep = olcek_0_100(dep_xg, 0, 3.0)
-savunma_ev = 100 - olcek_0_100(ev_ic_savunma_ort, 0, 2.5)
-savunma_dep = 100 - olcek_0_100(dep_dis_savunma_ort, 0, 2.5)
-form_ev = olcek_0_100(ev_ppg, 0, 3.0)
-form_dep = olcek_0_100(dep_ppg, 0, 3.0)
-kadro_ev = 100 - olcek_0_100(ev_kritik_eksik * 2 + ev_normal_eksik, 0, 10)
-kadro_dep = 100 - olcek_0_100(dep_kritik_eksik * 2 + dep_normal_eksik, 0, 10)
-
-radar_kategorileri = ["Hücum", "Savunma", "Form (PPG)", "Kadro Sağlığı"]
-radar_kategorileri_kapali = radar_kategorileri + [radar_kategorileri[0]]
-ev_radar_kapali = [hucum_ev, savunma_ev, form_ev, kadro_ev] + [hucum_ev]
-dep_radar_kapali = [hucum_dep, savunma_dep, form_dep, kadro_dep] + [hucum_dep]
-
-# --------------------------------------------------------------------------------
-# 🎲 SKOR TOPLAMI DAĞILIMI (0,1,2,3,4,5,6,7+ gol olasılıkları — tek grid'den)
-# --------------------------------------------------------------------------------
-_max_toplam = grid.shape[0] + grid.shape[1] - 1
-_dagilim_ham = np.zeros(_max_toplam)
-for _i in range(grid.shape[0]):
-    for _j in range(grid.shape[1]):
-        _dagilim_ham[_i + _j] += grid[_i, _j]
-_esik = 7
-gol_dagilimi_etiket = [str(k) for k in range(_esik)] + [f"{_esik}+"]
-gol_dagilimi_deger = list(_dagilim_ham[:_esik] * 100) + [_dagilim_ham[_esik:].sum() * 100]
+st.markdown("##### 🏆 Maç Sonucu İhtimalleri")
+c1, c2, c3 = st.columns(3)
+_sonuclar = [
+    (c1, "MS 1", ev_sahibi, ms1_olasilik, "#22c55e"),
+    (c2, "X", "Beraberlik", x_olasilik, "#94a3b8"),
+    (c3, "MS 2", deplasman, ms2_olasilik, "#ef4444"),
+]
+_en_yuksek = max(ms1_olasilik, x_olasilik, ms2_olasilik)
+for _col, _etiket, _isim, _deger, _renk in _sonuclar:
+    _parlak = _deger == _en_yuksek
+    _kenar = f"border: 2px solid {_renk};" if _parlak else "border: 1px solid #334155;"
+    with _col:
+        st.markdown(f"""
+        <div class="buyuk-kart" style="{_kenar}">
+            <div class="baslik">{_etiket}</div>
+            <div class="yuzde" style="color:{_renk};">%{_deger:.0f}</div>
+            <div class="isim">{_isim}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
 st.write("")
-tab_genel, tab_matris, tab_value, tab_yorum = st.tabs(
-    ["📊 Genel Bakış", "🔥 Skor Matrisi", "💰 Value Analizi", "🧠 Yorum"]
+
+# --------------------------------------------------------------------------------
+# 🥅 EN OLASI SKOR — büyük ve net
+# --------------------------------------------------------------------------------
+st.markdown(f"""
+<div class="skor-kutusu">
+    <div class="skor-buyuk">{ev_sahibi} {tahmin_ev_skor} - {tahmin_dep_skor} {deplasman}</div>
+    <div class="skor-alt">Modelin en olası gördüğü kesin skor (~%{metrics['en_iyi_skor_p']:.0f} ihtimal — tek skor için bu normaldir)</div>
+</div>
+""", unsafe_allow_html=True)
+
+# --------------------------------------------------------------------------------
+# ⚽ GOL PAZARLARI — Üst/Alt ve KG, büyük iki kart
+# --------------------------------------------------------------------------------
+st.markdown("##### ⚽ Gol Pazarları")
+g1, g2 = st.columns(2)
+with g1:
+    _ust_renk = "#22c55e" if ust_olasilik >= 55 else ("#ef4444" if ust_olasilik <= 45 else "#94a3b8")
+    _ust_yon = "2.5 ÜST" if ust_olasilik >= 50 else "2.5 ALT"
+    st.markdown(f"""
+    <div class="buyuk-kart">
+        <div class="baslik">GOL SAYISI (2.5)</div>
+        <div class="yuzde" style="color:{_ust_renk};">{_ust_yon}</div>
+        <div class="isim">Üst: %{ust_olasilik:.0f} &nbsp;|&nbsp; Alt: %{gol_alt_2_5:.0f}</div>
+    </div>
+    """, unsafe_allow_html=True)
+with g2:
+    _kg_renk = "#22c55e" if kg_var_olasilik >= 55 else ("#ef4444" if kg_var_olasilik <= 45 else "#94a3b8")
+    _kg_yon = "KG VAR" if kg_var_olasilik >= 50 else "KG YOK"
+    st.markdown(f"""
+    <div class="buyuk-kart">
+        <div class="baslik">KARŞILIKLI GOL</div>
+        <div class="yuzde" style="color:{_kg_renk};">{_kg_yon}</div>
+        <div class="isim">Var: %{kg_var_olasilik:.0f} &nbsp;|&nbsp; Yok: %{metrics['kg_yok']:.0f}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.write("")
+
+# --------------------------------------------------------------------------------
+# 🧾 KISA YORUM — tek paragraf, sade dil
+# --------------------------------------------------------------------------------
+st.markdown('<div class="premium-card">', unsafe_allow_html=True)
+
+yorum_kaynagi_ai = False
+yorum_metni_ai = None
+if ai_yorum_aktif and ANTHROPIC_PAKETI_MEVCUT and ai_api_anahtari:
+    with st.spinner("Claude maçı yorumluyor..."):
+        try:
+            yorum_metni_ai = claude_ile_yorum_uret(
+                ai_api_anahtari, ev_sahibi, deplasman, ev_xg, dep_xg, metrics,
+                en_iyi_bahis, pazar_t, value_puani, b_ms1, b_x, b_ms2,
+            )
+            yorum_kaynagi_ai = True
+        except Exception as e:
+            st.warning(f"AI yorumu üretilemedi ({e}); kural tabanlı yoruma dönülüyor.")
+
+if yorum_kaynagi_ai:
+    st.markdown("##### 🧠 Claude'un Yorumu")
+    st.markdown(f'<div class="yorum-box"><p>{yorum_metni_ai}</p></div>', unsafe_allow_html=True)
+else:
+    st.markdown("##### 🧾 Kısa Yorum")
+    _paragraflar = kural_tabanli_yorum_uret(
+        ev_sahibi, deplasman, ev_xg, dep_xg, ev_ppg, dep_ppg,
+        ev_cs, dep_cs, ev_kritik_eksik, dep_kritik_eksik,
+        ev_normal_eksik, dep_normal_eksik,
+        metrics, en_iyi_bahis, pazar_t, value_puani, veri_guveni,
+    )
+    # Bayideki adam için: sadece ilk paragraf öne çıksın, gerisi istenirse açılsın
+    st.markdown(f'<div class="yorum-box"><p>{_paragraflar[0]}</p></div>', unsafe_allow_html=True)
+    with st.expander("Devamını oku"):
+        st.markdown(f'<div class="yorum-box">{"".join(f"<p>{p}</p>" for p in _paragraflar[1:])}</div>', unsafe_allow_html=True)
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+ozet_metni = (
+    f"SEZGİN GÖRMÜŞ VERİ ANALİZİ — {ev_sahibi} vs {deplasman}\n"
+    f"Tarih: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
+    f"MS1: %{ms1_olasilik:.0f} | X: %{x_olasilik:.0f} | MS2: %{ms2_olasilik:.0f}\n"
+    f"2.5 Üst: %{ust_olasilik:.0f} | KG Var: %{kg_var_olasilik:.0f}\n"
+    f"En olası skor: {tahmin_ev_skor}-{tahmin_dep_skor}\n"
+    f"Model Tahmini: {en_iyi_bahis} ({pazar_t})\n"
 )
+st.download_button("📥 Analizi İndir (.txt)", data=ozet_metni,
+                    file_name=f"analiz_{ev_sahibi}_vs_{deplasman}.txt", mime="text/plain")
 
 # =================================================================================
-# TAB 1 — GENEL BAKIŞ: takım karşılaştırma radarı + 1X2 model/adil olasılık barı
+# 🔬 İLERİ DÜZEY ANALİZ (varsayılan gizli — meraklısı için tüm detaylı grafikler)
 # =================================================================================
-with tab_genel:
-    col_a, col_b = st.columns(2)
+st.write("")
+with st.expander("🔬 İleri Düzey Analiz (Meraklısına — grafikler, value hesabı, ısı haritası)"):
 
-    with col_a:
-        st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-        st.subheader("🧭 Takım Güç Karşılaştırması")
-        st.caption("0-100 ölçeğinde göreceli güç skoru (xG, savunma, form ve kadro sağlığından türetilir).")
+    st.markdown("###### 🔢 Detaylı Sayılar")
+    d1, d2, d3, d4 = st.columns(4)
+    d1.metric("Ev xG", f"{ev_xg:.2f}")
+    d2.metric("Deplasman xG", f"{dep_xg:.2f}")
+    d3.metric("Value Puanı", f"+{value_puani:.1f}" if value_puani is not None else "—")
+    d4.metric("Veri Güvenilirliği", f"%{veri_guveni:.0f}")
+
+    tab_genel, tab_matris, tab_value = st.tabs(["📊 Takım Karşılaştırma", "🔥 Skor Matrisi", "💰 Value Sinyalleri"])
+
+    # --- Takım karşılaştırma radarı ---
+    with tab_genel:
+        def olcek_0_100(deger, min_v, max_v):
+            if max_v == min_v:
+                return 50.0
+            return max(0.0, min(100.0, (deger - min_v) / (max_v - min_v) * 100))
+
+        hucum_ev = olcek_0_100(ev_xg, 0, 3.0)
+        hucum_dep = olcek_0_100(dep_xg, 0, 3.0)
+        savunma_ev = 100 - olcek_0_100(ev_ic_savunma_ort, 0, 2.5)
+        savunma_dep = 100 - olcek_0_100(dep_dis_savunma_ort, 0, 2.5)
+        form_ev = olcek_0_100(ev_ppg, 0, 3.0)
+        form_dep = olcek_0_100(dep_ppg, 0, 3.0)
+        kadro_ev = 100 - olcek_0_100(ev_kritik_eksik * 2 + ev_normal_eksik, 0, 10)
+        kadro_dep = 100 - olcek_0_100(dep_kritik_eksik * 2 + dep_normal_eksik, 0, 10)
+
+        radar_kategorileri = ["Hücum", "Savunma", "Form (PPG)", "Kadro Sağlığı"]
+        radar_kategorileri_kapali = radar_kategorileri + [radar_kategorileri[0]]
+        ev_radar_kapali = [hucum_ev, savunma_ev, form_ev, kadro_ev] + [hucum_ev]
+        dep_radar_kapali = [hucum_dep, savunma_dep, form_dep, kadro_dep] + [hucum_dep]
 
         fig_radar = go.Figure()
         fig_radar.add_trace(go.Scatterpolar(
@@ -852,262 +984,118 @@ with tab_genel:
         ))
         fig_radar.update_layout(
             template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)',
-            polar=dict(
-                bgcolor='rgba(0,0,0,0)',
-                radialaxis=dict(visible=True, range=[0, 100], gridcolor='#334155', showticklabels=True),
-                angularaxis=dict(gridcolor='#334155'),
-            ),
+            polar=dict(bgcolor='rgba(0,0,0,0)',
+                       radialaxis=dict(visible=True, range=[0, 100], gridcolor='#334155'),
+                       angularaxis=dict(gridcolor='#334155')),
             showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
             height=380, margin=dict(t=20, b=20, l=50, r=50),
         )
         st.plotly_chart(fig_radar, use_container_width=True, key="radar_karsilastirma")
-        st.markdown('</div>', unsafe_allow_html=True)
 
-    with col_b:
-        st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-        st.subheader("⚖️ Maç Sonucu: Model vs. Bülten")
-        st.caption("Model olasılığı ile bülten oranının marjdan arındırılmış (adil) olasılığı yan yana.")
+        with st.expander("Ham veri vs Bayesian düzeltme tablosu"):
+            seffaflik_df = pd.DataFrame({
+                "Metrik": [
+                    f"{ev_sahibi} — İç Saha Hücum", f"{ev_sahibi} — İç Saha Savunma",
+                    f"{ev_sahibi} — Son 5 Hücum", f"{ev_sahibi} — Son 5 Savunma",
+                    f"{deplasman} — Dış Saha Hücum", f"{deplasman} — Dış Saha Savunma",
+                    f"{deplasman} — Son 5 Hücum", f"{deplasman} — Son 5 Savunma",
+                ],
+                "Ham (Gözlenen)": [
+                    ev_ic_hucum_ort_ham, ev_ic_savunma_ort_ham, ev_son5_hucum_ort_ham, ev_son5_savunma_ort_ham,
+                    dep_dis_hucum_ort_ham, dep_dis_savunma_ort_ham, dep_son5_hucum_ort_ham, dep_son5_savunma_ort_ham,
+                ],
+                "Bayesian Düzeltilmiş": [
+                    ev_ic_hucum_ort, ev_ic_savunma_ort, ev_son5_hucum_ort, ev_son5_savunma_ort,
+                    dep_dis_hucum_ort, dep_dis_savunma_ort, dep_son5_hucum_ort, dep_son5_savunma_ort,
+                ],
+            })
+            seffaflik_df["Ham (Gözlenen)"] = seffaflik_df["Ham (Gözlenen)"].round(2)
+            seffaflik_df["Bayesian Düzeltilmiş"] = seffaflik_df["Bayesian Düzeltilmiş"].round(2)
+            st.dataframe(seffaflik_df, use_container_width=True, hide_index=True)
 
-        fig_1x2 = go.Figure()
-        fig_1x2.add_trace(go.Bar(
-            name='Model Olasılığı', x=['MS1', 'X', 'MS2'],
-            y=[ms1_olasilik, x_olasilik, ms2_olasilik],
-            marker_color='#8b5cf6', text=[f"%{v:.1f}" for v in [ms1_olasilik, x_olasilik, ms2_olasilik]],
-            textposition='outside',
+    # --- Skor ısı haritası ---
+    with tab_matris:
+        _boyut = 6
+        _z = grid[:_boyut, :_boyut] * 100
+        fig_heat = go.Figure(data=go.Heatmap(
+            z=_z, x=[str(j) for j in range(_boyut)], y=[str(i) for i in range(_boyut)],
+            colorscale=[[0, '#0b1329'], [0.5, '#6d28d9'], [1, '#22c55e']],
+            text=np.round(_z, 1), texttemplate="%{text}", textfont={"size": 12, "color": "#f8fafc"},
+            hovertemplate=f"{ev_sahibi}: %{{y}} — {deplasman}: %{{x}}<br>Olasılık: %{{z:.1f}}%<extra></extra>",
+            colorbar=dict(title="Olasılık (%)"),
         ))
-        fig_1x2.add_trace(go.Bar(
-            name='Adil Olasılık (Oran)', x=['MS1', 'X', 'MS2'],
-            y=[fair_ms1, fair_x, fair_ms2],
-            marker_color='#475569', text=[f"%{v:.1f}" for v in [fair_ms1, fair_x, fair_ms2]],
-            textposition='outside',
+        fig_heat.update_layout(
+            template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', height=420,
+            xaxis_title=f"{deplasman} — Gol Sayısı", yaxis_title=f"{ev_sahibi} — Gol Sayısı",
+            margin=dict(t=20, b=40, l=60, r=20),
+        )
+        st.plotly_chart(fig_heat, use_container_width=True, key="heatmap_skor")
+
+        _max_toplam = grid.shape[0] + grid.shape[1] - 1
+        _dagilim_ham = np.zeros(_max_toplam)
+        for _i in range(grid.shape[0]):
+            for _j in range(grid.shape[1]):
+                _dagilim_ham[_i + _j] += grid[_i, _j]
+        _esik = 7
+        gol_dagilimi_etiket = [str(k) for k in range(_esik)] + [f"{_esik}+"]
+        gol_dagilimi_deger = list(_dagilim_ham[:_esik] * 100) + [_dagilim_ham[_esik:].sum() * 100]
+        fig_dagilim = go.Figure(go.Bar(
+            x=gol_dagilimi_etiket, y=gol_dagilimi_deger, marker_color='#3b82f6',
+            text=[f"%{v:.1f}" for v in gol_dagilimi_deger], textposition='outside',
         ))
-        if piyasa_harman_aktif and piyasa_agirligi > 0:
-            fig_1x2.add_trace(go.Bar(
-                name=f'Harman (%{int(piyasa_agirligi*100)} piyasa)', x=['MS1', 'X', 'MS2'],
-                y=[harman_ms1, harman_x, harman_ms2],
-                marker_color='#22c55e', text=[f"%{v:.1f}" for v in [harman_ms1, harman_x, harman_ms2]],
-                textposition='outside',
-            ))
-        fig_1x2.update_layout(
-            barmode='group', template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-            height=380, yaxis_title="Olasılık (%)", yaxis_range=[0, 100],
-            legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
+        fig_dagilim.update_layout(
+            template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+            height=280, xaxis_title="Toplam Gol Sayısı", yaxis_title="Olasılık (%)",
             margin=dict(t=20, b=20, l=40, r=20),
         )
-        st.plotly_chart(fig_1x2, use_container_width=True, key="bar_1x2")
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.plotly_chart(fig_dagilim, use_container_width=True, key="bar_gol_dagilimi")
 
-    st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-    st.subheader("🥅 Maçtaki Toplam Gol Sayısı Dağılımı")
-    st.caption("Skor matrisinden türetilmiştir; her çubuk o sayıda toplam gol olma olasılığını gösterir.")
-    fig_dagilim = go.Figure(go.Bar(
-        x=gol_dagilimi_etiket, y=gol_dagilimi_deger, marker_color='#3b82f6',
-        text=[f"%{v:.1f}" for v in gol_dagilimi_deger], textposition='outside',
-    ))
-    fig_dagilim.update_layout(
-        template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-        height=300, xaxis_title="Toplam Gol Sayısı", yaxis_title="Olasılık (%)",
-        margin=dict(t=20, b=20, l=40, r=20),
-    )
-    st.plotly_chart(fig_dagilim, use_container_width=True, key="bar_gol_dagilimi")
-    st.markdown('</div>', unsafe_allow_html=True)
+    # --- Value sinyalleri + güven göstergesi ---
+    with tab_value:
+        vc1, vc2 = st.columns(2)
+        with vc1:
+            st.caption("Value = Model olasılığı − bülten oranının adil (marjdan arındırılmış) olasılığı.")
 
-    with st.expander("🔍 Model Şeffaflığı: Ham Veri vs. Bayesian Düzeltme"):
-        st.caption(
-            "Az sayıda maça dayanan ham ortalamalar şans eserini abartabilir. Sidebar'daki "
-            "Bayesian düzeltme, bu oranları veri arttıkça daha az, azaldıkça daha çok "
-            "güvenilir bir referansa doğru çekiyor. Aşağıda bu düzeltmenin öncesi/sonrası var."
-        )
-        seffaflik_df = pd.DataFrame({
-            "Metrik": [
-                f"{ev_sahibi} — İç Saha Hücum", f"{ev_sahibi} — İç Saha Savunma",
-                f"{ev_sahibi} — Son 5 Hücum", f"{ev_sahibi} — Son 5 Savunma",
-                f"{deplasman} — Dış Saha Hücum", f"{deplasman} — Dış Saha Savunma",
-                f"{deplasman} — Son 5 Hücum", f"{deplasman} — Son 5 Savunma",
-            ],
-            "Ham (Gözlenen)": [
-                ev_ic_hucum_ort_ham, ev_ic_savunma_ort_ham, ev_son5_hucum_ort_ham, ev_son5_savunma_ort_ham,
-                dep_dis_hucum_ort_ham, dep_dis_savunma_ort_ham, dep_son5_hucum_ort_ham, dep_son5_savunma_ort_ham,
-            ],
-            "Bayesian Düzeltilmiş": [
-                ev_ic_hucum_ort, ev_ic_savunma_ort, ev_son5_hucum_ort, ev_son5_savunma_ort,
-                dep_dis_hucum_ort, dep_dis_savunma_ort, dep_son5_hucum_ort, dep_son5_savunma_ort,
-            ],
-        })
-        seffaflik_df["Ham (Gözlenen)"] = seffaflik_df["Ham (Gözlenen)"].round(2)
-        seffaflik_df["Bayesian Düzeltilmiş"] = seffaflik_df["Bayesian Düzeltilmiş"].round(2)
-        st.dataframe(seffaflik_df, use_container_width=True, hide_index=True)
-
-# =================================================================================
-# TAB 2 — SKOR MATRİSİ: ısı haritası
-# =================================================================================
-with tab_matris:
-    st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-    st.subheader("🔥 Skor Olasılık Isı Haritası")
-    st.caption("Her hücre, o kesin skorun gerçekleşme olasılığını gösterir (Dixon-Coles düzeltmeli Poisson matrisi).")
-
-    _boyut = 6
-    _z = grid[:_boyut, :_boyut] * 100
-    fig_heat = go.Figure(data=go.Heatmap(
-        z=_z,
-        x=[str(j) for j in range(_boyut)],
-        y=[str(i) for i in range(_boyut)],
-        colorscale=[[0, '#0b1329'], [0.5, '#6d28d9'], [1, '#22c55e']],
-        text=np.round(_z, 1),
-        texttemplate="%{text}",
-        textfont={"size": 12, "color": "#f8fafc"},
-        hovertemplate=f"{ev_sahibi}: %{{y}} — {deplasman}: %{{x}}<br>Olasılık: %{{z:.1f}}%<extra></extra>",
-        colorbar=dict(title="Olasılık (%)"),
-    ))
-    fig_heat.update_layout(
-        template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)',
-        height=440,
-        xaxis_title=f"{deplasman} — Gol Sayısı",
-        yaxis_title=f"{ev_sahibi} — Gol Sayısı",
-        margin=dict(t=20, b=40, l=60, r=20),
-    )
-    st.plotly_chart(fig_heat, use_container_width=True, key="heatmap_skor")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-    st.caption("En olası skor")
-    st.markdown(
-        f'<div style="text-align:center; font-size:28px; font-weight:bold; color:#f8fafc;">'
-        f'{ev_sahibi} {tahmin_ev_skor} - {tahmin_dep_skor} {deplasman}</div>'
-        f'<div style="text-align:center; font-size:13px; color:#94a3b8; margin-top:4px;">'
-        f'~%{metrics["en_iyi_skor_p"]:.1f} olasılıkla (tek bir skor için bu normal bir orandır)</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# =================================================================================
-# TAB 3 — VALUE ANALİZİ: sinyal kartları + seçilen bahsin güven göstergesi
-# =================================================================================
-with tab_value:
-    col_c, col_d = st.columns([1, 1])
-
-    with col_c:
-        st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-        st.subheader("🚨 Value Sinyalleri")
-        st.caption("Value = Model olasılığı − bülten oranının marjdan arındırılmış (adil) olasılığı.")
-
-        def sinyal_satiri(pazar, model_p, oran, value):
-            renk = "#10b981" if value > 0 else "#ef4444"
-            yuzde = min(abs(value) * 10, 100)
-            st.markdown(f"""
-            <div style="background: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 10px; margin-bottom: 8px; border: 1px solid #1e293b;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                    <span style="font-weight: 600; color: #f8fafc;">{pazar}</span>
-                    <span style="color: {renk}; font-weight: bold;">{value:+.2f}</span>
+            def sinyal_satiri(pazar, model_p, oran, value):
+                renk = "#10b981" if value > 0 else "#ef4444"
+                yuzde = min(abs(value) * 10, 100)
+                st.markdown(f"""
+                <div style="background: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 10px; margin-bottom: 8px; border: 1px solid #1e293b;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span style="font-weight: 600; color: #f8fafc;">{pazar}</span>
+                        <span style="color: {renk}; font-weight: bold;">{value:+.2f}</span>
+                    </div>
+                    <div style="font-size: 11px; color: #64748b; margin-bottom: 5px;">Model: %{model_p:.1f} | Oran: {oran}</div>
+                    <div style="width: 100%; background: #334155; height: 4px; border-radius: 2px;">
+                        <div style="width: {yuzde}%; background: {renk}; height: 4px; border-radius: 2px;"></div>
+                    </div>
                 </div>
-                <div style="font-size: 11px; color: #64748b; margin-bottom: 5px;">Model: %{model_p:.1f} | Oran: {oran}</div>
-                <div style="width: 100%; background: #334155; height: 4px; border-radius: 2px;">
-                    <div style="width: {yuzde}%; background: {renk}; height: 4px; border-radius: 2px;"></div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
 
-        sinyal_satiri(f"MS 1 ({ev_sahibi})", ms1_olasilik, b_ms1, v_ms1)
-        sinyal_satiri("Beraberlik (X)", x_olasilik, b_x, v_x)
-        sinyal_satiri(f"MS 2 ({deplasman})", ms2_olasilik, b_ms2, v_ms2)
+            sinyal_satiri(f"MS 1 ({ev_sahibi})", ms1_olasilik, b_ms1, v_ms1)
+            sinyal_satiri("Beraberlik (X)", x_olasilik, b_x, v_x)
+            sinyal_satiri(f"MS 2 ({deplasman})", ms2_olasilik, b_ms2, v_ms2)
+            if diger_pazar_aktif:
+                fair_ust25, fair_alt25 = adil_olasiliklar([b_ust25, b_alt25])
+                fair_kgvar, fair_kgyok = adil_olasiliklar([b_kgvar, b_kgyok])
+                sinyal_satiri("2.5 Üst", metrics["ust25"], b_ust25, metrics["ust25"] - fair_ust25)
+                sinyal_satiri("2.5 Alt", metrics["alt25"], b_alt25, metrics["alt25"] - fair_alt25)
+                sinyal_satiri("KG Var", metrics["kg_var"], b_kgvar, metrics["kg_var"] - fair_kgvar)
+                sinyal_satiri("KG Yok", metrics["kg_yok"], b_kgyok, metrics["kg_yok"] - fair_kgyok)
 
-        if diger_pazar_aktif:
-            fair_ust25, fair_alt25 = adil_olasiliklar([b_ust25, b_alt25])
-            fair_kgvar, fair_kgyok = adil_olasiliklar([b_kgvar, b_kgyok])
-            sinyal_satiri("2.5 Üst", metrics["ust25"], b_ust25, metrics["ust25"] - fair_ust25)
-            sinyal_satiri("2.5 Alt", metrics["alt25"], b_alt25, metrics["alt25"] - fair_alt25)
-            sinyal_satiri("KG Var", metrics["kg_var"], b_kgvar, metrics["kg_var"] - fair_kgvar)
-            sinyal_satiri("KG Yok", metrics["kg_yok"], b_kgyok, metrics["kg_yok"] - fair_kgyok)
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with col_d:
-        st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-        st.subheader("🎯 Seçilen Bahsin Güven Göstergesi")
-
-        if secim_olasiligi is not None:
-            fig_gauge = go.Figure(go.Indicator(
-                mode="gauge+number",
-                value=secim_olasiligi,
-                number={'suffix': "%"},
-                title={'text': en_iyi_bahis.split(" (")[0], 'font': {'size': 16}},
-                gauge={
-                    'axis': {'range': [0, 100], 'tickcolor': '#94a3b8'},
-                    'bar': {'color': '#8b5cf6'},
-                    'bgcolor': 'rgba(0,0,0,0)',
-                    'steps': [
-                        {'range': [0, 35], 'color': '#1e293b'},
-                        {'range': [35, 60], 'color': '#334155'},
-                        {'range': [60, 100], 'color': '#475569'},
-                    ],
-                },
-            ))
-            fig_gauge.update_layout(
-                template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', height=300,
-                margin=dict(t=50, b=10, l=30, r=30), font={'color': '#f8fafc'},
-            )
-            st.plotly_chart(fig_gauge, use_container_width=True, key="gauge_guven")
-            if value_puani is not None:
-                st.caption(f"Bu seçim, bülten oranının ima ettiği adil olasılığa göre ~{value_puani:.1f} puanlık bir value taşıyor.")
+        with vc2:
+            if secim_olasiligi is not None:
+                fig_gauge = go.Figure(go.Indicator(
+                    mode="gauge+number", value=secim_olasiligi, number={'suffix': "%"},
+                    title={'text': en_iyi_bahis.split(" (")[0], 'font': {'size': 16}},
+                    gauge={'axis': {'range': [0, 100], 'tickcolor': '#94a3b8'}, 'bar': {'color': '#8b5cf6'},
+                           'bgcolor': 'rgba(0,0,0,0)',
+                           'steps': [{'range': [0, 35], 'color': '#1e293b'},
+                                     {'range': [35, 60], 'color': '#334155'},
+                                     {'range': [60, 100], 'color': '#475569'}]},
+                ))
+                fig_gauge.update_layout(template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', height=300,
+                                         margin=dict(t=50, b=10, l=30, r=30), font={'color': '#f8fafc'})
+                st.plotly_chart(fig_gauge, use_container_width=True, key="gauge_guven")
             else:
-                st.caption("Bu seçim ham model olasılığına dayanıyor; bu pazar için value hesaplanmadı.")
-        else:
-            st.info("Model şu an hiçbir pazarda yeterince güçlü bir sinyal bulamadı — temkinli olmakta fayda var (PAS).")
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-# =================================================================================
-# TAB 4 — YORUM: kural tabanlı ya da gerçek Claude yorumu + indirme
-# =================================================================================
-with tab_yorum:
-    st.markdown('<div class="premium-card">', unsafe_allow_html=True)
-
-    yorum_kaynagi_ai = False
-    yorum_metni_ai = None
-
-    if ai_yorum_aktif and ANTHROPIC_PAKETI_MEVCUT and ai_api_anahtari:
-        with st.spinner("Claude maçı yorumluyor..."):
-            try:
-                yorum_metni_ai = claude_ile_yorum_uret(
-                    ai_api_anahtari, ev_sahibi, deplasman, ev_xg, dep_xg, metrics,
-                    en_iyi_bahis, pazar_t, value_puani, b_ms1, b_x, b_ms2,
-                )
-                yorum_kaynagi_ai = True
-            except Exception as e:
-                st.warning(f"AI yorumu üretilemedi ({e}); kural tabanlı yoruma dönülüyor.")
-
-    if yorum_kaynagi_ai:
-        st.subheader("🧠 Claude Maç Yorumu")
-        st.caption("Bu yorum, girdiğin API anahtarıyla gerçek bir Claude modelinden üretildi.")
-        st.markdown(f'<div class="yorum-box"><p>{yorum_metni_ai}</p></div>', unsafe_allow_html=True)
-    else:
-        st.subheader("🧾 Kural Tabanlı Otomatik Yorum")
-        st.caption("Bu bir yapay zeka/dil modeli çıktısı değildir — internet gerektirmeyen, sabit kurallara dayalı bir analiz metnidir.")
-        paragraflar = kural_tabanli_yorum_uret(
-            ev_sahibi, deplasman, ev_xg, dep_xg, ev_ppg, dep_ppg,
-            ev_cs, dep_cs, ev_kritik_eksik, dep_kritik_eksik,
-            ev_normal_eksik, dep_normal_eksik,
-            metrics, en_iyi_bahis, pazar_t, value_puani, veri_guveni,
-        )
-        html_govde = "".join(f"<p>{p}</p>" for p in paragraflar)
-        st.markdown(f'<div class="yorum-box">{html_govde}</div>', unsafe_allow_html=True)
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown("---")
-    ozet_metni = (
-        f"SEZGİN GÖRMÜŞ VERİ ANALİZİ — {ev_sahibi} vs {deplasman}\n"
-        f"Tarih: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
-        f"Ev xG: {ev_xg:.2f} | Deplasman xG: {dep_xg:.2f}\n"
-        f"MS1: %{ms1_olasilik:.1f} | X: %{x_olasilik:.1f} | MS2: %{ms2_olasilik:.1f}\n"
-        f"2.5 Üst: %{ust_olasilik:.1f} | KG Var: %{kg_var_olasilik:.1f}\n"
-        f"En olası skor: {tahmin_ev_skor}-{tahmin_dep_skor}\n"
-        f"Model Tahmini: {en_iyi_bahis} ({pazar_t})\n"
-    )
-    st.download_button(
-        "📥 Bu Analiz Özetini İndir (.txt)",
-        data=ozet_metni,
-        file_name=f"analiz_{ev_sahibi}_vs_{deplasman}.txt",
-        mime="text/plain",
-        use_container_width=True,
-    )
+                st.info("Model şu an hiçbir pazarda yeterince güçlü bir sinyal bulamadı.")
