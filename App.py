@@ -551,37 +551,42 @@ with st.sidebar.expander("📡 Piyasa ile Harmanlama (Opsiyonel)", expanded=Fals
                                      help="0% = saf model, 50% = model ve piyasaya eşit ağırlık.") / 100
 
 with st.sidebar.expander("🏠 Ev Sahibi İstatistikleri", expanded=False):
-    ev_ic_mac = st.number_input("İç Sahada Oynadığı Maç", min_value=1, value=1)
-    ev_ic_puan = st.number_input("İç Sahada Topladığı Puan", min_value=0, value=1)
-    ev_toplam_gol = st.number_input("İç Sahada Attığı Toplam Gol", min_value=0, value=1)
-    ev_toplam_yenen = st.number_input("İç Sahada Yediği Toplam Gol", min_value=0, value=1)
-    ev_son5_attigi = st.number_input("Son 5 Maçta Attığı Gol (Form)", min_value=0, value=1)
-    ev_son5_yedigi = st.number_input("Son 5 Maçta Yediği Gol (Form)", min_value=0, value=1)
+    st.caption("SoccerStats.com'daki takım sayfasının **'home'** satırından birebir kopyala: GP, PPG, GF, GA.")
+    ev_ic_mac = st.number_input("GP — İç Sahada Oynadığı Maç Sayısı", min_value=1, value=1, step=1)
+    ev_ic_ppg = st.number_input("PPG — İç Sahada Maç Başına Puan", min_value=0.0, value=1.30, step=0.01, format="%.2f")
+    ev_ic_gf = st.number_input("GF — İç Sahada Maç Başına Attığı Gol (ortalama)", min_value=0.0, value=1.30, step=0.01, format="%.2f")
+    ev_ic_ga = st.number_input("GA — İç Sahada Maç Başına Yediği Gol (ortalama)", min_value=0.0, value=1.30, step=0.01, format="%.2f")
+    st.caption("⚠️ Bunlar ORTALAMA (maç başına) değerlerdir, toplam gol DEĞİL — SoccerStats'ta GF/GA sütunları zaten ortalama olarak gösterilir.")
+    ev_son5_attigi = st.number_input("Son 5 Maçta Attığı TOPLAM Gol (5 maçın toplamı)", min_value=0, value=7, step=1)
+    ev_son5_yedigi = st.number_input("Son 5 Maçta Yediği TOPLAM Gol (5 maçın toplamı)", min_value=0, value=7, step=1)
     ev_cs = st.slider("Ev Sahibi Son 5 Maçta Gol Yemediği Maç Sayısı", 0, 5, 2)
     ev_onem = st.slider("Ev Sahibinin Maç Önem Derecesi (1-5)", 1, 5, 5)
 
 with st.sidebar.expander("🚀 Deplasman İstatistikleri", expanded=False):
-    dep_dis_mac = st.number_input("Dış Sahada Oynadığı Maç", min_value=1, value=1)
-    dep_dis_puan = st.number_input("Dış Sahada Topladığı Puan", min_value=0, value=1)
-    dep_toplam_gol = st.number_input("Dış Sahada Attığı Toplam Gol", min_value=0, value=1)
-    dep_toplam_yenen = st.number_input("Dış Sahada Yediği Toplam Gol", min_value=0, value=1)
-    dep_son5_attigi = st.number_input("Son 5 Maçta Dışarıda Attığı Gol", min_value=0, value=1)
-    dep_son5_yedigi = st.number_input("Son 5 Maçta Dışarıda Yediği Gol", min_value=0, value=1)
+    st.caption("SoccerStats.com'daki takım sayfasının **'away'** satırından birebir kopyala: GP, PPG, GF, GA.")
+    dep_dis_mac = st.number_input("GP — Dış Sahada Oynadığı Maç Sayısı", min_value=1, value=1, step=1)
+    dep_dis_ppg = st.number_input("PPG — Dış Sahada Maç Başına Puan", min_value=0.0, value=1.00, step=0.01, format="%.2f")
+    dep_dis_gf = st.number_input("GF — Dış Sahada Maç Başına Attığı Gol (ortalama)", min_value=0.0, value=1.00, step=0.01, format="%.2f")
+    dep_dis_ga = st.number_input("GA — Dış Sahada Maç Başına Yediği Gol (ortalama)", min_value=0.0, value=1.00, step=0.01, format="%.2f")
+    st.caption("⚠️ Bunlar ORTALAMA (maç başına) değerlerdir, toplam gol DEĞİL.")
+    dep_son5_attigi = st.number_input("Son 5 Maçta Dışarıda Attığı TOPLAM Gol (5 maçın toplamı)", min_value=0, value=5, step=1)
+    dep_son5_yedigi = st.number_input("Son 5 Maçta Dışarıda Yediği TOPLAM Gol (5 maçın toplamı)", min_value=0, value=5, step=1)
     dep_cs = st.slider("Deplasman Son 5 Maçta Gol Yemediği Maç Sayısı", 0, 5, 1)
     dep_onem = st.slider("Deplasmanın Maç Önem Derecesi (1-5)", 1, 5, 4)
 
-with st.sidebar.expander("🏆 Genel Lig İstatistikleri", expanded=False):
+with st.sidebar.expander("🏆 Genel Lig İstatistikleri (Sezon Geneli — Ev/Dış Ayrımsız)", expanded=False):
+    st.caption("SoccerStats'ta takımın **'overall' / 'total'** satırından: GP, GF, GA.")
     col_genel1, col_genel2 = st.columns(2)
     with col_genel1:
         st.markdown("**Ev Sahibi (Genel)**")
-        ev_genel_mac = st.number_input("Toplam Maç (Ev)", min_value=1, value=1, step=1)
-        ev_genel_attigi = st.number_input("Toplam Attığı Gol (Ev)", min_value=0, value=1, step=1)
-        ev_genel_yedigi = st.number_input("Toplam Yediği Gol (Ev)", min_value=0, value=1, step=1)
+        ev_genel_mac = st.number_input("GP — Toplam Maç (Ev)", min_value=1, value=1, step=1)
+        ev_genel_gf = st.number_input("GF — Maç Başına Attığı Gol (Ev)", min_value=0.0, value=1.30, step=0.01, format="%.2f")
+        ev_genel_ga = st.number_input("GA — Maç Başına Yediği Gol (Ev)", min_value=0.0, value=1.30, step=0.01, format="%.2f")
     with col_genel2:
         st.markdown("**Deplasman (Genel)**")
-        dep_genel_mac = st.number_input("Toplam Maç (Dep)", min_value=1, value=1, step=1)
-        dep_genel_attigi = st.number_input("Toplam Attığı Gol (Dep)", min_value=0, value=1, step=1)
-        dep_genel_yedigi = st.number_input("Toplam Yediği Gol (Dep)", min_value=0, value=1, step=1)
+        dep_genel_mac = st.number_input("GP — Toplam Maç (Dep)", min_value=1, value=1, step=1)
+        dep_genel_gf = st.number_input("GF — Maç Başına Attığı Gol (Dep)", min_value=0.0, value=1.30, step=0.01, format="%.2f")
+        dep_genel_ga = st.number_input("GA — Maç Başına Yediği Gol (Dep)", min_value=0.0, value=1.30, step=0.01, format="%.2f")
 
 with st.sidebar.expander("🛡️ Sağlık & Kadro Eksik Raporu", expanded=False):
     ev_kritik_eksik = st.slider("Ev Sahibi Kritik Eksik (As Kaleci, Golcü vb.)", 0, 3, 0)
@@ -658,21 +663,21 @@ takim_ayni_mi = (
 # --------------------------------------------------------------------------------
 yarim_lig_ort = lig_ort_gol / 2  # shrinkage önculleri için erken hesaplanıyor
 
-# --- HAM (düzeltilmemiş) oranlar ---
-ev_ic_hucum_ort_ham = ev_toplam_gol / ev_ic_mac
-ev_ic_savunma_ort_ham = ev_toplam_yenen / ev_ic_mac
-dep_dis_hucum_ort_ham = dep_toplam_gol / dep_dis_mac
-dep_dis_savunma_ort_ham = dep_toplam_yenen / dep_dis_mac
+# --- HAM (düzeltilmemiş) oranlar — artık SoccerStats'tan doğrudan GF/GA olarak geliyor, bölme YOK ---
+ev_ic_hucum_ort_ham = ev_ic_gf
+ev_ic_savunma_ort_ham = ev_ic_ga
+dep_dis_hucum_ort_ham = dep_dis_gf
+dep_dis_savunma_ort_ham = dep_dis_ga
 
 ev_son5_hucum_ort_ham = ev_son5_attigi / 5
 ev_son5_savunma_ort_ham = ev_son5_yedigi / 5
 dep_son5_hucum_ort_ham = dep_son5_attigi / 5
 dep_son5_savunma_ort_ham = dep_son5_yedigi / 5
 
-ev_genel_hucum_ort_ham = ev_genel_attigi / ev_genel_mac
-ev_genel_savunma_ort_ham = ev_genel_yedigi / ev_genel_mac
-dep_genel_hucum_ort_ham = dep_genel_attigi / dep_genel_mac
-dep_genel_savunma_ort_ham = dep_genel_yedigi / dep_genel_mac
+ev_genel_hucum_ort_ham = ev_genel_gf
+ev_genel_savunma_ort_ham = ev_genel_ga
+dep_genel_hucum_ort_ham = dep_genel_gf
+dep_genel_savunma_ort_ham = dep_genel_ga
 
 # --- 1. KADEME: Sezon geneli oranlar, lig ortalamasına doğru küçültülür ---
 ev_genel_hucum_ort = bayes_shrink(ev_genel_hucum_ort_ham, ev_genel_mac, yarim_lig_ort, k_genel)
@@ -713,8 +718,8 @@ dep_genel_savunma_katsayi = dep_genel_savunma_ort / max(yarim_lig_ort, 0.1)
 dep_genel_hucum_katsayi = dep_genel_hucum_ort / max(yarim_lig_ort, 0.1)
 ev_genel_savunma_katsayi = ev_genel_savunma_ort / max(yarim_lig_ort, 0.1)
 
-ev_ppg = ev_ic_puan / ev_ic_mac
-dep_ppg = dep_dis_puan / dep_dis_mac
+ev_ppg = ev_ic_ppg
+dep_ppg = dep_dis_ppg
 puan_orani = ev_ppg / max((ev_ppg + dep_ppg), 0.1)
 puan_denge_carpan = 0.85 + (puan_orani * 0.30)
 
