@@ -527,13 +527,31 @@ with st.sidebar.expander("🎓 Gelişmiş İstatistik Ayarları (Bayesian Düzel
         "doğru hafifçe çeker — veri arttıkça bu etki otomatik olarak azalır. 0 = düzeltme yok "
         "(ham veri, v9/v10 davranışı)."
     )
-    k_genel = st.slider("Sezon Ortalaması Düzeltme Gücü (k)", 0, 15, 4,
+
+    st.markdown("**⚡ Hazır Ayar (Sezon Dönemine Göre)**")
+    st.caption("Elle uğraşmak istemiyorsan, durumuna en yakın butona tıkla — dört slider da otomatik ayarlanır.")
+    _presets = {
+        "🌱 Sezon Başı": {"k_genel_slider": 7, "k_saha_slider": 6, "k_form_slider": 4, "k_h2h_slider": 6},
+        "📊 Sezon Ortası": {"k_genel_slider": 4, "k_saha_slider": 3, "k_form_slider": 3, "k_h2h_slider": 4},
+        "🏁 Sezon Sonu": {"k_genel_slider": 2, "k_saha_slider": 2, "k_form_slider": 3, "k_h2h_slider": 4},
+        "🏆 Kupa/Az Maçlı": {"k_genel_slider": 9, "k_saha_slider": 7, "k_form_slider": 4, "k_h2h_slider": 7},
+    }
+    _preset_cols = st.columns(2)
+    for _i, (_isim, _degerler) in enumerate(_presets.items()):
+        with _preset_cols[_i % 2]:
+            if st.button(_isim, use_container_width=True, key=f"preset_btn_{_isim}"):
+                for _anahtar, _deger in _degerler.items():
+                    st.session_state[_anahtar] = _deger
+                st.rerun()
+
+    st.markdown("---")
+    k_genel = st.slider("Sezon Ortalaması Düzeltme Gücü (k)", 0, 15, 4, key="k_genel_slider",
                          help="Sezon geneli hücum/savunma ortalamalarını lig ortalamasına doğru çeker.")
-    k_saha = st.slider("İç/Dış Saha Ortalaması Düzeltme Gücü (k)", 0, 15, 3,
+    k_saha = st.slider("İç/Dış Saha Ortalaması Düzeltme Gücü (k)", 0, 15, 3, key="k_saha_slider",
                         help="İç veya dış sahaya özel ortalamaları, takımın sezon geneline doğru çeker.")
-    k_form = st.slider("Son 5 Maç (Form) Düzeltme Gücü (k)", 0, 15, 3,
+    k_form = st.slider("Son 5 Maç (Form) Düzeltme Gücü (k)", 0, 15, 3, key="k_form_slider",
                         help="5 maçlık form verisini, takımın saha-özel ortalamasına doğru çeker.")
-    k_h2h = st.slider("İkili Geçmiş (H2H) Düzeltme Gücü (k)", 0, 15, 4,
+    k_h2h = st.slider("İkili Geçmiş (H2H) Düzeltme Gücü (k)", 0, 15, 4, key="k_h2h_slider",
                        help="H2H maç sayısı genelde çok azdır (2-5 maç); bu yüzden güçlü bir "
                             "düzeltme öneriyoruz. H2H verisi girmezsen bu ayarın hiç etkisi olmaz.")
 
