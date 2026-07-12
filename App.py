@@ -513,6 +513,12 @@ with st.sidebar.expander("🌍 Lig & Ağırlıklandırma", expanded=False):
         help="Düşük skorlu maçlardaki (0-0, 1-0, 0-1, 1-1) gerçek hayat korelasyonunu modele ekler. "
              "0'a yakın değer, bağımsız Poisson varsayımına (v8.0 davranışı) döner."
     )
+    ev_avantaj_carpani = st.slider(
+        "Ek Ev Sahibi Avantajı Çarpanı", 0.90, 1.15, 1.00, step=0.01,
+        help="İç/dış saha verisi zaten ev avantajını büyük ölçüde yansıtır; bu sadece ince ayar "
+             "içindir. Ev sahibi desteğinin çok güçlü olduğu bir lig/ortamsa hafifçe yukarı, "
+             "seyircisiz/nötr sahaysa hafifçe aşağı çekebilirsin. 1.00 = değişiklik yok."
+    )
 
 with st.sidebar.expander("🎓 Gelişmiş İstatistik Ayarları (Bayesian Düzeltme)", expanded=False):
     st.caption(
@@ -527,6 +533,9 @@ with st.sidebar.expander("🎓 Gelişmiş İstatistik Ayarları (Bayesian Düzel
                         help="İç veya dış sahaya özel ortalamaları, takımın sezon geneline doğru çeker.")
     k_form = st.slider("Son 5 Maç (Form) Düzeltme Gücü (k)", 0, 15, 3,
                         help="5 maçlık form verisini, takımın saha-özel ortalamasına doğru çeker.")
+    k_h2h = st.slider("İkili Geçmiş (H2H) Düzeltme Gücü (k)", 0, 15, 4,
+                       help="H2H maç sayısı genelde çok azdır (2-5 maç); bu yüzden güçlü bir "
+                            "düzeltme öneriyoruz. H2H verisi girmezsen bu ayarın hiç etkisi olmaz.")
 
 with st.sidebar.expander("📡 Piyasa ile Harmanlama (Opsiyonel)", expanded=False):
     st.caption(
@@ -579,6 +588,24 @@ with st.sidebar.expander("🛡️ Sağlık & Kadro Eksik Raporu", expanded=False
     ev_normal_eksik = st.slider("Ev Sahibi Normal Eksik (Rotasyon Oyuncusu)", 0, 5, 1)
     dep_kritik_eksik = st.slider("Deplasman Kritik Eksik (As Kaleci, Golcü vb.)", 0, 3, 1)
     dep_normal_eksik = st.slider("Deplasman Normal Eksik (Rotasyon Oyuncusu)", 0, 5, 2)
+
+with st.sidebar.expander("🤝 İkili Geçmiş (Head-to-Head)", expanded=False):
+    st.caption(
+        "Bu iki takımın birbirine karşı geçmiş performansı — bazı takımlar genel güçlerinden "
+        "bağımsız olarak belirli rakiplere karşı iyi/kötü sonuçlar alır. Veri girmezsen "
+        "(0 maç) bu bölümün hiçbir etkisi olmaz."
+    )
+    h2h_mac_sayisi = st.number_input("Son Kaç Karşılaşma Dikkate Alınsın", min_value=0, value=0, step=1)
+    h2h_ev_gol = st.number_input("Bu Karşılaşmalarda Ev Sahibinin Attığı Toplam Gol", min_value=0, value=0, step=1)
+    h2h_dep_gol = st.number_input("Bu Karşılaşmalarda Deplasmanın Attığı Toplam Gol", min_value=0, value=0, step=1)
+
+with st.sidebar.expander("😮‍💨 Fikstür Yoğunluğu / Dinlenme", expanded=False):
+    st.caption(
+        "Art arda sık maç oynayan (kupa/Avrupa maçı arası gibi) takımlar genelde biraz daha "
+        "düşük performans gösterir. 6+ gün dinlenmiş bir takım için etkisi yoktur."
+    )
+    ev_dinlenme_gun = st.number_input("Ev Sahibinin Son Maçtan Bu Yana Geçen Gün Sayısı", min_value=1, value=7, step=1)
+    dep_dinlenme_gun = st.number_input("Deplasmanın Son Maçtan Bu Yana Geçen Gün Sayısı", min_value=1, value=7, step=1)
 
 with st.sidebar.expander("📊 Bülten Oranları (Maç Sonucu)", expanded=True):
     b_ms1 = st.number_input("Bülten Oranı: MS 1", min_value=1.01, value=1.85)
@@ -706,29 +733,61 @@ ev_savunma_zafiyeti = min((ev_kritik_eksik * 0.04) + (ev_normal_eksik * 0.015), 
 dep_savunma_zafiyeti = min((dep_kritik_eksik * 0.04) + (dep_normal_eksik * 0.015), 0.20)
 
 # --------------------------------------------------------------------------------
-# ⚖️ GÜVENİLİRLİK-AĞIRLIKLI HARMAN (ÖNEMLİ DÜZELTME)
+# 🤝 İKİLİ GEÇMİŞ (H2H) BİLEŞENİ
+# -------------------------------------------------------------------------------
+# H2H maç sayısı neredeyse her zaman çok küçüktür (2-5 maç), bu yüzden takımın zaten
+# hesaplanmış saha-özel ortalamasına (ev_ic_hucum_ort / dep_dis_hucum_ort) doğru GÜÇLÜ
+# şekilde küçültülür. Veri girilmezse (h2h_mac_sayisi=0) ağırlığı otomatik 0 olur —
+# hiçbir etkisi olmaz.
+# --------------------------------------------------------------------------------
+if h2h_mac_sayisi > 0:
+    h2h_ev_hucum_ort_ham = h2h_ev_gol / h2h_mac_sayisi
+    h2h_dep_hucum_ort_ham = h2h_dep_gol / h2h_mac_sayisi
+else:
+    h2h_ev_hucum_ort_ham = 0.0
+    h2h_dep_hucum_ort_ham = 0.0
+
+h2h_ev_xg_bilesen = bayes_shrink(h2h_ev_hucum_ort_ham, h2h_mac_sayisi, ev_ic_hucum_ort, k_h2h)
+h2h_dep_xg_bilesen = bayes_shrink(h2h_dep_hucum_ort_ham, h2h_mac_sayisi, dep_dis_hucum_ort, k_h2h)
+
+def h2h_agirligi_hesapla(n, k=k_h2h, tavan=0.15):
+    if n <= 0:
+        return 0.0
+    guven = n / (n + max(k, 0.5))
+    return tavan * guven
+
+_ev_h2h_agirlik = h2h_agirligi_hesapla(h2h_mac_sayisi)
+_dep_h2h_agirlik = h2h_agirligi_hesapla(h2h_mac_sayisi)
+
+# --------------------------------------------------------------------------------
+# ⚖️ GÜVENİLİRLİK-AĞIRLIKLI HARMAN (3 BİLEŞEN: İç/Dış Saha + Genel Sezon + H2H)
 # -------------------------------------------------------------------------------
 # ESKİ DAVRANIŞ (hatalıydı): ic/dis-özel xG ile genel-sezon xG hep sabit %50/%50
 # ağırlıkla harmanlanıyordu. Kullanıcı "Genel Lig İstatistikleri" bölümünü boş/
 # varsayılan (1 maç, 1 gol) bırakırsa, bu bölüm HER İKİ takım için de neredeyse
 # birebir aynı sayıya yakınsıyordu ve gerçek iç/dış saha farkını %50 oranında
-# anlamsız bir "ortalamaya doğru çekme" ile sulandırıyordu — bu da tahminlerin
-# sürekli 1-1 / 1-0 gibi düşük, birbirine yakın skorlarda toplanmasına yol açıyordu.
+# anlamsız bir "ortalamaya doğru çekme" ile sulandırıyordu.
 #
-# YENİ DAVRANIŞ: Genel-sezon bileşeninin ağırlığı, o bölümün ne kadar GERÇEK veriyle
-# desteklendiğine göre otomatik ayarlanır (kaç maça dayandığına bakılır). Doldurulmamışsa
-# (n=1, varsayılan) ağırlığı neredeyse sıfıra iner; iyi doldurulmuşsa (çok maç) anlamlı
-# ama yine de iç/dış saha sinyalini asla domine etmeyecek şekilde (tavan %40) katkı sağlar.
+# YENİ DAVRANIŞ: Genel-sezon ve H2H bileşenlerinin ağırlığı, o bölümün ne kadar
+# GERÇEK veriyle desteklendiğine göre otomatik ayarlanır. Doldurulmamışsa ağırlığı
+# neredeyse sıfıra iner; iyi doldurulmuşsa anlamlı ama yine de iç/dış saha sinyalini
+# asla domine etmeyecek şekilde (genel: tavan %40, H2H: tavan %15) katkı sağlar.
 # --------------------------------------------------------------------------------
 def genel_agirligi_hesapla(genel_mac, k=k_genel, tavan=0.40):
     guven = genel_mac / (genel_mac + max(k, 0.5))
     return tavan * guven
 
-_ev_genel_agirlik = genel_agirligi_hesapla(ev_genel_mac)
-_dep_genel_agirlik = genel_agirligi_hesapla(dep_genel_mac)
+_ev_genel_agirlik_ham = genel_agirligi_hesapla(ev_genel_mac)
+_dep_genel_agirlik_ham = genel_agirligi_hesapla(dep_genel_mac)
 
-ev_xg = (ev_ic_xg * (1 - _ev_genel_agirlik)) + (ev_genel_xg * _ev_genel_agirlik)
-dep_xg = (dep_dis_xg * (1 - _dep_genel_agirlik)) + (dep_genel_xg * _dep_genel_agirlik)
+# Üç bileşenin toplam ağırlığı 1'i geçemez: önce H2H payını ayırıyoruz, kalanı ic/genel paylaşıyor.
+_ev_genel_agirlik = _ev_genel_agirlik_ham * (1 - _ev_h2h_agirlik)
+_dep_genel_agirlik = _dep_genel_agirlik_ham * (1 - _dep_h2h_agirlik)
+_ev_ic_agirlik = 1 - _ev_genel_agirlik - _ev_h2h_agirlik
+_dep_ic_agirlik = 1 - _dep_genel_agirlik - _dep_h2h_agirlik
+
+ev_xg = (ev_ic_xg * _ev_ic_agirlik) + (ev_genel_xg * _ev_genel_agirlik) + (h2h_ev_xg_bilesen * _ev_h2h_agirlik)
+dep_xg = (dep_dis_xg * _dep_ic_agirlik) + (dep_genel_xg * _dep_genel_agirlik) + (h2h_dep_xg_bilesen * _dep_h2h_agirlik)
 
 ev_xg *= puan_denge_carpan * ev_onem_carpan
 dep_xg *= (2.0 - puan_denge_carpan) * dep_onem_carpan
@@ -738,6 +797,30 @@ dep_xg *= (1 - dep_hucum_cezasi)
 
 ev_xg *= (1 + dep_savunma_zafiyeti)
 dep_xg *= (1 + ev_savunma_zafiyeti)
+
+# --------------------------------------------------------------------------------
+# 😮‍💨 FİKSTÜR YOĞUNLUĞU / DİNLENME CEZASI
+# -------------------------------------------------------------------------------
+# 6+ gün dinlenmiş bir takım için etkisi yoktur. Daha az dinlenmişse, her eksik gün
+# için hücumda küçük bir düşüş (tavan %10) ve rakibin hücumuna hafif bir katkı
+# (yorgun takımın savunması da bir miktar zayıflar) uygulanır.
+# --------------------------------------------------------------------------------
+def dinlenme_carpani(gun, esik=6, maks_ceza=0.10):
+    if gun >= esik:
+        return 1.0
+    eksik_gun = esik - gun
+    return 1.0 - min(maks_ceza, eksik_gun * 0.02)
+
+ev_dinlenme_carpan = dinlenme_carpani(ev_dinlenme_gun)
+dep_dinlenme_carpan = dinlenme_carpani(dep_dinlenme_gun)
+
+ev_xg *= ev_dinlenme_carpan
+dep_xg *= dep_dinlenme_carpan
+dep_xg *= (1 + (1 - ev_dinlenme_carpan) * 0.5)   # yorgun ev sahibinin savunması da hafif zayıflar
+ev_xg *= (1 + (1 - dep_dinlenme_carpan) * 0.5)   # yorgun deplasmanın savunması da hafif zayıflar
+
+# --- Manuel ev sahibi avantajı ince ayarı (varsayılan 1.00 = etkisiz) ---
+ev_xg *= ev_avantaj_carpani
 
 ev_xg = max(ev_xg, 0.05)
 dep_xg = max(dep_xg, 0.05)
@@ -1021,19 +1104,30 @@ with st.expander("🔬 İleri Düzey Analiz (Meraklısına — grafikler, value 
                     f"{ev_sahibi} — Son 5 Hücum", f"{ev_sahibi} — Son 5 Savunma",
                     f"{deplasman} — Dış Saha Hücum", f"{deplasman} — Dış Saha Savunma",
                     f"{deplasman} — Son 5 Hücum", f"{deplasman} — Son 5 Savunma",
+                    f"{ev_sahibi} — H2H Hücum", f"{deplasman} — H2H Hücum",
                 ],
                 "Ham (Gözlenen)": [
                     ev_ic_hucum_ort_ham, ev_ic_savunma_ort_ham, ev_son5_hucum_ort_ham, ev_son5_savunma_ort_ham,
                     dep_dis_hucum_ort_ham, dep_dis_savunma_ort_ham, dep_son5_hucum_ort_ham, dep_son5_savunma_ort_ham,
+                    h2h_ev_hucum_ort_ham, h2h_dep_hucum_ort_ham,
                 ],
                 "Bayesian Düzeltilmiş": [
                     ev_ic_hucum_ort, ev_ic_savunma_ort, ev_son5_hucum_ort, ev_son5_savunma_ort,
                     dep_dis_hucum_ort, dep_dis_savunma_ort, dep_son5_hucum_ort, dep_son5_savunma_ort,
+                    h2h_ev_xg_bilesen, h2h_dep_xg_bilesen,
                 ],
             })
             seffaflik_df["Ham (Gözlenen)"] = seffaflik_df["Ham (Gözlenen)"].round(2)
             seffaflik_df["Bayesian Düzeltilmiş"] = seffaflik_df["Bayesian Düzeltilmiş"].round(2)
             st.dataframe(seffaflik_df, use_container_width=True, hide_index=True)
+
+            st.caption(
+                f"Nihai ağırlıklar — {ev_sahibi}: İç Saha %{_ev_ic_agirlik*100:.0f}, "
+                f"Genel Sezon %{_ev_genel_agirlik*100:.0f}, H2H %{_ev_h2h_agirlik*100:.0f} | "
+                f"{deplasman}: Dış Saha %{_dep_ic_agirlik*100:.0f}, "
+                f"Genel Sezon %{_dep_genel_agirlik*100:.0f}, H2H %{_dep_h2h_agirlik*100:.0f}. "
+                f"Dinlenme çarpanı — {ev_sahibi}: {ev_dinlenme_carpan:.2f}, {deplasman}: {dep_dinlenme_carpan:.2f}."
+            )
 
     # --- Skor ısı haritası ---
     with tab_matris:
